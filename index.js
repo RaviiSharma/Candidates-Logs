@@ -149,7 +149,7 @@ app.post("/postData",async (req, res) => {
                   message: "company_location  required and should contain only alphabets",
                 });
               }
-              //___________________________________________________company_logo________________________________________________
+              //___________________________________________________company_logo
               if (!company_logo || company_logo.length == 0) {
                 return res
                     .status(400)
@@ -223,7 +223,7 @@ app.post("/postData",async (req, res) => {
 
                console.log("company_logo",company_logo)
                console.log("company_email",company_email)
-//______________________________________________________________aws upload file,mail
+//_____________aws upload file,mail
 
                 const uploadedProfilePictureUrl = await uploadFile(company_logo, company_email);
                 console.log("uploadedProfilePictureUrl", uploadedProfilePictureUrl)   
@@ -258,7 +258,75 @@ app.post("/postData",async (req, res) => {
 
 })
 
-  //_________________________________________________/ getSingle url based on company email/________________________________________________________________________________
+//________________________________________________________update company
+
+app.put('/updateCompany/:company_id',  async (req, res) => {
+  const payload = req.body;
+  console.log("payload",payload)
+
+  let company_logo = req.files;
+  //console.log("company_logo",company_logo)
+
+  let id = req.params.company_id;
+  if (!id) {
+    return res.status(400).json({ message: "company_id is required" });
+  }
+
+  let {organization_id,company_name,company_location,company_gst,company_email,company_website,company_financialyear_start,
+    company_financialyear_end,compant_TAN_no,company_PAN_no} = payload;
+
+    if(company_email){
+      if (!isValidInputValue(company_email) ||!isValidEmail(company_email)) {
+        return res.status(400).send({
+          status: false,
+          message: "company_email address is required and should be a valid email address and you have to also update company_log",});
+      }
+    
+      if(company_logo){
+        //console.log("company_logo",req.files.company_logo)
+        
+        // let k=await db("ptr_company").select("company_email").where("company_id",id)
+        // console.log("k",k[0].company_email)
+        let c=payload["company_logo"]=company_email
+        //console.log("c ",c)
+        const uploadedProfilePictureUrl = await uploadFile(req.files.company_logo,company_email);
+        console.log("uploadedProfilePictureUrl", uploadedProfilePictureUrl)   
+      
+      }else{ return res.status(400).send({
+        status: false,
+        message: "company_logo is required to update",});}
+    }else{
+      
+    }
+
+  if(company_logo){
+  //console.log("company_logo",req.files.company_logo)
+  
+  let k=await db("ptr_company").select("company_email").where("company_id",id)
+  console.log("k",k[0].company_email)
+  let c=payload["company_logo"]=k[0].company_email
+  //console.log("c ",c)
+  const uploadedProfilePictureUrl = await uploadFile(req.files.company_logo, k[0].company_email);
+  console.log("uploadedProfilePictureUrl", uploadedProfilePictureUrl)   
+
+}
+
+  payload.updated_by = "1";
+  payload.updated_at = new Date();
+  try {
+    const company = await db("ptr_company")
+      .where("company_id", id)
+      .update(payload);
+    return res
+      .status(200)
+     .send({msg: "Successfully updated Company"});
+  } catch (err) {
+    
+      return res.status(500).send({ error: err });
+  }
+});
+  //_________________________________________________/ getSingle url by company email /________________________________________________________________________________
+
   app.post('/getSingle', async (req, res) => {
     try {
       const company_email = req.body.company_email;
@@ -284,14 +352,14 @@ app.post("/postData",async (req, res) => {
     } catch (error) {res.status(500).send({ error: error.message });}
   });
 
-//_________________________________________get company details with single company url _____________________________________________
-
+//_______________________________________________get company with single company logo url_________________________________
 
   app.post('/getCompany', async (req, res) => {
     try {
       const company_id = req.body.company_id;
       console.log("company_id",company_id)
-    if (
+
+      if (
         !company_id ||
         !isValidInputValue(company_id) 
       ) {
@@ -300,36 +368,75 @@ app.post("/postData",async (req, res) => {
           message: "company_id  is required and should be a valid company_id ",
         });
       }
-      const companies = await db('ptr_company')
-      .where('company_id', company_id)
-      .select('*');
-      if(companies.length ==0){return res.status(400).send({ msg: "company_id is not found in db"});}
+      const w = await db('ptr_company').where('company_id', company_id).select('*');
+      if(w.length==0){return res.status(400).send({ msg: "company_id is not found in db"});}
       else{
-        console.log("companies",companies)
+        console.log("w ",w[0].company_email)
 
-        const companyData = companies.map(async (company) => {
-          const url = await download(company.company_email);
-          console.log("url",url)
-    
-          if (url.length > 0) {
-            company.company_logo = url;
+        const url = await download(w[0].company_email);
+        if(url.length==0){
+  
+          let object={
+            company_id: w[0].company_id,
+            organization_id: w[0].organization_id,
+            company_name: w[0].company_name,
+            company_location: w[0].company_location,
+            company_gst: w[0].company_gst,
+            company_website: w[0].company_website,
+            company_email: w[0].company_email,
+            company_logo:w[0].company_logo,
+            company_PF_no: w[0].company_PF_no,
+            compant_TAN_no: w[0].compant_TAN_no,
+            company_PAN_no: w[0].company_PAN_no,
+            company_ESI_no: w[0].company_ESI_no,
+            company_LIN_no: w[0].company_LIN_no,
+            Registration_Certificate_no: w[0].Registration_Certificate_no,
+            company_financialyear_start: w[0].company_financialyear_start,
+            company_financialyear_end: w[0].company_financialyear_end,
+            created_by: w[0].created_by,
+            updated_by: w[0].updated_by,
+            created_at: w[0].created_at,
+            updated_at: w[0].updated_at
+        
           }
-          console.log("company",company)
-          return company;
-        });
-    
-        const resolvedCompanies = await Promise.all(companyData);
-        //console("resolvedCompanies",resolvedCompanies)
-    
-        return res.status(200).send({ msg: "details",total:resolvedCompanies.length, companies: resolvedCompanies });
+  
+          return res.status(200).send({msg:"details",data:object})}
+  
+        else{
+        
+          let object={
+            company_id: w[0].company_id,
+            organization_id: w[0].organization_id,
+            company_name: w[0].company_name,
+            company_location: w[0].company_location,
+            company_gst: w[0].company_gst,
+            company_website: w[0].company_website,
+            company_email: w[0].company_email,
+      
+            company_logo:url,
+      
+            company_PF_no: w[0].company_PF_no,
+            compant_TAN_no: w[0].compant_TAN_no,
+            company_PAN_no: w[0].company_PAN_no,
+            company_ESI_no: w[0].company_ESI_no,
+            company_LIN_no: w[0].company_LIN_no,
+            Registration_Certificate_no: w[0].Registration_Certificate_no,
+            company_financialyear_start: w[0].company_financialyear_start,
+            company_financialyear_end: w[0].company_financialyear_end,
+            created_by: w[0].created_by,
+            updated_by: w[0].updated_by,
+            created_at: w[0].created_at,
+            updated_at: w[0].updated_at
+        
+          }
+          console.log("object ",object)
+      return res.status(200).send({msg:"details",data:object})
+        }
       }
-
-
     } catch (error) {res.status(500).send({ error: error.message });}
   });
 
-//______________________________________________________________________________________
-//_______get all company Details at time
+//_____________________________________get all company Details at time with companies logo____________________________________________________
 
 app.post('/getall', async (req, res) => {
   try {
@@ -499,6 +606,8 @@ const response = (code, status, message, data = "", count = false) => {
         .json(response("400", "error", "Something wents wrong"));
     }
   })
+
+
 //________________________________________________________update in sql table and create in mongodb documents______________
 
 
