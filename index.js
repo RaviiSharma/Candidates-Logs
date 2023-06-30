@@ -258,7 +258,7 @@ app.post("/postData",async (req, res) => {
 
 })
 
-  //_________________________________________________/ getSingle /________________________________________________________________________________
+  //_________________________________________________/ getSingle url based on company email/________________________________________________________________________________
   app.post('/getSingle', async (req, res) => {
     try {
       const company_email = req.body.company_email;
@@ -284,6 +284,94 @@ app.post("/postData",async (req, res) => {
     } catch (error) {res.status(500).send({ error: error.message });}
   });
 
+//_________________________________________get company details with single company url _____________________________________________
+
+
+  app.post('/getCompany', async (req, res) => {
+    try {
+      const company_id = req.body.company_id;
+      console.log("company_id",company_id)
+    if (
+        !company_id ||
+        !isValidInputValue(company_id) 
+      ) {
+        return res.status(400).send({
+          status: false,
+          message: "company_id  is required and should be a valid company_id ",
+        });
+      }
+      const companies = await db('ptr_company')
+      .where('company_id', company_id)
+      .select('*');
+      if(companies.length ==0){return res.status(400).send({ msg: "company_id is not found in db"});}
+      else{
+        console.log("companies",companies)
+
+        const companyData = companies.map(async (company) => {
+          const url = await download(company.company_email);
+          console.log("url",url)
+    
+          if (url.length > 0) {
+            company.company_logo = url;
+          }
+          console.log("company",company)
+          return company;
+        });
+    
+        const resolvedCompanies = await Promise.all(companyData);
+        //console("resolvedCompanies",resolvedCompanies)
+    
+        return res.status(200).send({ msg: "details",total:resolvedCompanies.length, companies: resolvedCompanies });
+      }
+
+
+    } catch (error) {res.status(500).send({ error: error.message });}
+  });
+
+//______________________________________________________________________________________
+//_______get all company Details at time
+
+app.post('/getall', async (req, res) => {
+  try {
+    const organization_id = req.body.organization_id;
+    console.log("organization_id", organization_id);
+
+    if (!organization_id || !isValidInputValue(organization_id)) {
+      return res.status(400).send({
+        status: false,
+        message: "organization_id is required and should be a valid organization_id",
+      });
+    }
+
+    const companies = await db('ptr_company')
+      .where('organization_id', organization_id)
+      .select('*');
+      if(companies.length ==0){return res.status(400).send({ msg: "organization_id is not found in db"});}
+      else{
+        console.log("companies",companies)
+
+        const companyData = companies.map(async (company) => {
+          const url = await download(company.company_email);
+          console.log("url",url)
+    
+          if (url.length > 0) {
+            company.company_logo = url;
+          }
+          console.log("company",company)
+          return company;
+        });
+    
+        const resolvedCompanies = await Promise.all(companyData);
+        //console("resolvedCompanies",resolvedCompanies)
+    
+        return res.status(200).send({ msg: "details",total:resolvedCompanies.length, companies: resolvedCompanies });
+      }
+
+     
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
 
 
 
@@ -511,4 +599,3 @@ const candidateModel = require("./models/candidateModel");
 app.listen(3000, () => {console.log("mysql Server started at post 3000")});
 
 
-//what is javascript ?
