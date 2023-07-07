@@ -258,7 +258,7 @@ app.post("/postData",async (req, res) => {
 
 })
 
-//________________________________________________________update company
+//_______________________________________update company________________________________________
 
 app.put('/updateCompany/:company_id',  async (req, res) => {
   const payload = req.body;
@@ -352,7 +352,7 @@ app.put('/updateCompany/:company_id',  async (req, res) => {
     } catch (error) {res.status(500).send({ error: error.message });}
   });
 
-//_______________________________________________get company with single company logo url_________________________________
+//_______________________________________________get company with company logo url_________________________________
 
   app.post('/getCompany', async (req, res) => {
     try {
@@ -610,10 +610,9 @@ const response = (code, status, message, data = "", count = false) => {
 
 //________________________________________________________update in sql table and create in mongodb documents______________
 
-
-  const createUser = async function (payload) {
+  app.post('/createUser' ,async function (req,res) {
     try {
-     // let requestBody = req.body;
+     let payload = req.body;
       const { candidate_id, candidate_name, candidate_gender, candidate_dob, candidate_email, candidate_mobile,candidate_address,
         candidate_company,candidate_qualification,candidate_applied_dept,candidate_experience, candidate_ref_no,candidate_resume,
         candidate_remarks,candidate_interview_date,candidate_interview_time,candidate_updated_by,candidate_is_called,candidate_letter} = payload //Destructuring
@@ -662,12 +661,462 @@ const response = (code, status, message, data = "", count = false) => {
         console.log("store",store)
 
       let created = await candidateModel.create(store)
-      console.log("Created ==",created)
+      return res.status(200).send({ code: "200", status: "success", msg: "successfully!", result:store});         
+
+      
     }
     catch (err) {
       res.status(500).send({ status: false, msg: err.message })
     }
-  }
+  })
+  //________________________________________________________updateCandidate _____________________________________________________________
+
+  app.post("/updateCandidate", async function (req, res) {
+    try {
+      var payload = req.body;
+      //console.log(payload)
+      var candidate_resume = req.files;
+
+      var {
+        candidate_name,
+        candidate_gender,
+        candidate_dob,
+        candidate_email,
+        candidate_mobile,
+        candidate_address,
+        candidate_company,
+        candidate_qualification,
+        candidate_applied_dept,
+        candidate_experience,
+        candidate_ref_no,
+        candidate_remarks,
+        candidate_interview_date,
+        candidate_interview_time,
+        candidate_updated_by,
+        candidate_is_called,
+        candidate_letter,
+      } = payload; //Destructuring
+
+      var store = {};
+
+      const candidate_id = payload.candidate_id;
+      if (!candidate_id) {
+        return res
+          .status(400)
+          .send({ status: false, msg: "candidate_id is mandatory" });
+      }
+      //esko check krnah resume ko
+      if (candidate_resume) {
+        console.log("resume is here", candidate_resume);
+
+        var k = await db("ptr_candidates")
+          .select("candidate_ref_no")
+          .where("candidate_id", candidate_id);
+        console.log("k", k[0].candidate_ref_no);
+
+        const uploadedUrl = await uploadFile(
+          req.files.candidate_resume,
+          k[0].candidate_ref_no
+        );
+
+        payload["candidate_resume"] = k[0].candidate_ref_no;
+
+        // console.log("payload",payload)
+
+        const sqlRow = await db("ptr_candidates")
+          .where("candidate_id", candidate_id)
+          .select("*");
+
+        if (sqlRow) {
+          var candidateToUpdate = {};
+          //console.log("sqlRow",sqlRow[0][key])
+
+
+          const entries = Object.entries(payload);
+          if (entries.length > 0) {
+            entries.shift();
+            var modifiedPay = Object.fromEntries(entries);
+          }
+          
+         //  console.log("modifiedPay",modifiedPay)
+
+          for (const key in modifiedPay) {
+            if (
+              modifiedPay.hasOwnProperty(key) &&
+              String(sqlRow[0][key]) !== String(modifiedPay[key])
+            ) {
+              candidateToUpdate[key] = modifiedPay[key];
+              console.log("candidateToUpdate[key]", candidateToUpdate[key]);
+
+              if (payload["candidate_id"]) {
+                store[
+                  "candidate_id"
+                ] = `candidate_id is : ${payload["candidate_id"]}`;
+              }
+
+              // if(payload["candidate_resume"]){store["candidate_resume"]=`updated candidate_resume is : ${payload["candidate_resume"]}`;}
+
+              if (candidateToUpdate["candidate_resume"]) {
+                store[
+                  "candidate_resume"
+                ] = `updated candidate_resume is : ${candidateToUpdate["candidate_resume"]}`;
+              }
+
+              if (candidateToUpdate["candidate_name"]) {
+                store[
+                  "candidate_name"
+                ] = `updated candidate_name is : ${candidateToUpdate["candidate_name"]}`;
+              }
+
+              if (candidateToUpdate["candidate_mobile"]) {
+                store[
+                  "candidate_mobile"
+                ] = `updated candidate_mobile is : ${candidateToUpdate["candidate_mobile"]}`;
+              }
+
+              if (candidateToUpdate["candidate_is_called"]) {
+                store[
+                  "candidate_is_called"
+                ] = `updated candidate_is_called is : ${candidateToUpdate["candidate_is_called"]}`;
+              }
+
+              if (candidateToUpdate["candidate_letter"]) {
+                store[
+                  "candidate_letter"
+                ] = `updated candidate_letter is : ${candidateToUpdate["candidate_letter"]}`;
+              }
+
+              if (candidateToUpdate["candidate_email"]) {
+                store[
+                  "candidate_email"
+                ] = `updated candidate_email is : ${candidateToUpdate["candidate_email"]}`;
+              }
+
+              if (candidateToUpdate["candidate_gender"]) {
+                store[
+                  "candidate_gender"
+                ] = `updated candidate_gender is : ${candidateToUpdate["candidate_gender"]}`;
+              }
+
+              if (candidateToUpdate["candidate_address"]) {
+                store[
+                  "candidate_address"
+                ] = `updated candidate_address is : ${candidateToUpdate["candidate_address"]}`;
+              }
+
+              if (candidateToUpdate["candidate_dob"]) {
+                store[
+                  "candidate_dob"
+                ] = `updated candidate_dob is : ${candidateToUpdate["candidate_dob"]}`;
+              }
+
+              if (candidateToUpdate["candidate_company"]) {
+                store[
+                  "candidate_company"
+                ] = `updated candidate_company is : ${candidateToUpdate["candidate_company"]}`;
+              }
+
+              if (candidateToUpdate["candidate_qualification"]) {
+                store[
+                  "candidate_qualification"
+                ] = `updated candidate_qualification is : ${candidateToUpdate["candidate_qualification"]}`;
+              }
+
+              if (candidateToUpdate["candidate_applied_dept"]) {
+                store[
+                  "candidate_applied_dept"
+                ] = `updated candidate_applied_dept is : ${candidateToUpdate["candidate_applied_dept"]}`;
+              }
+
+              if (candidateToUpdate["candidate_experience"]) {
+                store[
+                  "candidate_experience"
+                ] = `updated candidate_experience is : ${candidateToUpdate["candidate_experience"]}`;
+              }
+
+              if (candidateToUpdate["candidate_ref_no"]) {
+                store[
+                  "candidate_ref_no"
+                ] = `updated candidate_ref_no is : ${candidateToUpdate["candidate_ref_no"]}`;
+              }
+
+              if (candidateToUpdate["candidate_remarks"]) {
+                store[
+                  "candidate_remarks"
+                ] = `updated candidate_remarks is : ${candidateToUpdate["candidate_remarks"]}`;
+              }
+
+              if (candidateToUpdate["candidate_interview_date"]) {
+                store[
+                  "candidate_interview_date"
+                ] = `updated candidate_interview_date is : ${candidateToUpdate["candidate_interview_date"]}`;
+              }
+
+              if (candidateToUpdate["candidate_interview_time"]) {
+                store[
+                  "candidate_interview_time"
+                ] = `updated candidate_interview_time is : ${candidateToUpdate["candidate_interview_time"]}`;
+              }
+
+              if (candidateToUpdate["candidate_updated_by"]) {
+                store[
+                  "candidate_updated_by"
+                ] = `updated candidate_updated_by is : ${candidateToUpdate["candidate_updated_by"]}`;
+              }
+            } 
+          }
+          if (Object.keys(candidateToUpdate).length > 0) {
+            //update in sql table
+            await db("ptr_candidates")
+              .where("candidate_id", candidate_id)
+              .update(candidateToUpdate);
+
+            const entries = Object.entries(store);
+            if (entries.length > 0) {
+              entries.shift();
+              var modifiedStore = Object.fromEntries(entries);
+            }
+            console.log("store", store);
+
+            let created = await candidateModel.create(store);
+            return res
+              .status(200)
+              .send({
+                code: "200",
+                status: "success",
+                msg: "successfully!",
+                result: modifiedStore,
+              });
+          }{
+            return res.status(400).send({code:"400", status:"success",msg: "nothing to updated" });
+          }
+        } else {
+          console.log("Candidate not found in SQL table");
+        }
+      }  //when resume is not present
+      else {
+        console.log("resume not here");
+
+        const sqlRow = await db("ptr_candidates")
+          .where("candidate_id", candidate_id)
+          .select("*");
+        console.log("sqlRow", sqlRow);
+        //console.log("payload", payload);
+
+        if (sqlRow) {
+          var candidateToUpdate = {};
+          //console.log("sqlRow",sqlRow[0][key])
+        
+         const entries = Object.entries(payload);
+         if (entries.length > 0) {
+           entries.shift();
+           var modifiedPay = Object.fromEntries(entries);
+         }
+         
+        //  console.log("modifiedPay",modifiedPay)
+
+          for (const key in modifiedPay) {
+
+            if (
+              modifiedPay.hasOwnProperty(key) &&
+              String(sqlRow[0][key]) !== String(modifiedPay[key])
+            ) {
+              candidateToUpdate[key] = modifiedPay[key];
+              console.log("candidateToUpdate[key]", candidateToUpdate[key]);
+
+              if (payload["candidate_id"]) {
+                store[
+                  "candidate_id"
+                ] = `candidate_id is : ${payload["candidate_id"]}`;
+              }
+
+              if (candidateToUpdate["candidate_name"]) {
+                store[
+                  "candidate_name"
+                ] = `updated candidate_name is : ${candidateToUpdate["candidate_name"]}`;
+              }
+
+              if (candidateToUpdate["candidate_mobile"]) {
+                store[
+                  "candidate_mobile"
+                ] = `updated candidate_mobile is : ${candidateToUpdate["candidate_mobile"]}`;
+              }
+
+              if (candidateToUpdate["candidate_is_called"]) {
+                store[
+                  "candidate_is_called"
+                ] = `updated candidate_is_called is : ${candidateToUpdate["candidate_is_called"]}`;
+              }
+
+              if (candidateToUpdate["candidate_letter"]) {
+                store[
+                  "candidate_letter"
+                ] = `updated candidate_letter is : ${candidateToUpdate["candidate_letter"]}`;
+              }
+
+              if (candidateToUpdate["candidate_email"]) {
+                store[
+                  "candidate_email"
+                ] = `updated candidate_email is : ${candidateToUpdate["candidate_email"]}`;
+              }
+
+              if (candidateToUpdate["candidate_gender"]) {
+                store[
+                  "candidate_gender"
+                ] = `updated candidate_gender is : ${candidateToUpdate["candidate_gender"]}`;
+              }
+
+              if (candidateToUpdate["candidate_address"]) {
+                store[
+                  "candidate_address"
+                ] = `updated candidate_address is : ${candidateToUpdate["candidate_address"]}`;
+              }
+
+              if (candidateToUpdate["candidate_dob"]) {
+                store[
+                  "candidate_dob"
+                ] = `updated candidate_dob is : ${candidateToUpdate["candidate_dob"]}`;
+              }
+
+              if (candidateToUpdate["candidate_company"]) {
+                store[
+                  "candidate_company"
+                ] = `updated candidate_company is : ${candidateToUpdate["candidate_company"]}`;
+              }
+
+              if (candidateToUpdate["candidate_qualification"]) {
+                store[
+                  "candidate_qualification"
+                ] = `updated candidate_qualification is : ${candidateToUpdate["candidate_qualification"]}`;
+              }
+
+              if (candidateToUpdate["candidate_applied_dept"]) {
+                store[
+                  "candidate_applied_dept"
+                ] = `updated candidate_applied_dept is : ${candidateToUpdate["candidate_applied_dept"]}`;
+              }
+
+              if (candidateToUpdate["candidate_experience"]) {
+                store[
+                  "candidate_experience"
+                ] = `updated candidate_experience is : ${candidateToUpdate["candidate_experience"]}`;
+              }
+
+              if (candidateToUpdate["candidate_ref_no"]) {
+                store[
+                  "candidate_ref_no"
+                ] = `updated candidate_ref_no is : ${candidateToUpdate["candidate_ref_no"]}`;
+              }
+
+              if (candidateToUpdate["candidate_remarks"]) {
+                store[
+                  "candidate_remarks"
+                ] = `updated candidate_remarks is : ${candidateToUpdate["candidate_remarks"]}`;
+              }
+
+              if (candidateToUpdate["candidate_interview_date"]) {
+                store[
+                  "candidate_interview_date"
+                ] = `updated candidate_interview_date is : ${candidateToUpdate["candidate_interview_date"]}`;
+              }
+
+              if (candidateToUpdate["candidate_interview_time"]) {
+                store[
+                  "candidate_interview_time"
+                ] = `updated candidate_interview_time is : ${candidateToUpdate["candidate_interview_time"]}`;
+              }
+
+              if (candidateToUpdate["candidate_updated_by"]) {
+                store[
+                  "candidate_updated_by"
+                ] = `updated candidate_updated_by is : ${candidateToUpdate["candidate_updated_by"]}`;
+              }
+            } 
+          }
+
+          console.log("candidateToUpdate",Object.keys(candidateToUpdate).length)
+
+          if (Object.keys(candidateToUpdate).length > 0) {
+            //update in sql table
+            await db("ptr_candidates")
+              .where("candidate_id", candidate_id)
+              .update(candidateToUpdate);
+
+            const entries = Object.entries(store);
+            if (entries.length > 0) {
+              entries.shift();
+              var modifiedStore = Object.fromEntries(entries);
+            }
+            console.log("store", store);
+
+            let created = await candidateModel.create(store);
+            return res
+              .status(200)
+              .send({
+                code: "200",
+                status: "success",
+                msg: "successfully!",
+                result: modifiedStore,
+              });
+          } else {
+            return res.status(400).send({code:"400", status:"success",msg: "nothing to updated" });
+          }
+        } else {
+          console.log("Candidate not found in SQL table");
+        }
+      }
+    } catch (err) {
+      return res
+        .status(500)
+        .send({ code: "500", status: "failed", error: "server error" });
+    }
+  });
+  
+//______________________________________________________________candidateLogs ______________________________________________
+
+  app.get("/candidateLogs", async function (req, res) {
+    try {
+      const candidate_id = req.body.candidate_id;
+      console.log("candidate_id", candidate_id);
+
+      if (isValidInputValue(candidate_id)) {
+        const result = await candidateModel.find({
+          candidate_id: `candidate_id is : ${candidate_id}`,
+        });
+
+        if (result.length > 0) {
+          console.log(result);
+          return res.send({
+            code: "200",
+            status: "success",
+            no_candidateLogs: result.length,
+            response: "candidateLogs",
+            data: result,
+          });
+        } else {
+          return res
+            .status(400)
+            .send({
+              code: "400",
+              status: "failed",
+              error: `no data present by canidate_id : ${candidate_id} `,
+            });
+        }
+      } else {
+        return res
+          .status(400)
+          .send({
+            code: "400",
+            status: "failed",
+            error: "candidate_id is required",
+          });
+      }
+    } catch (err) {
+      return res
+        .status(500)
+        .send({ code: "500", status: "failed", error: "server error" });
+    }
+  });
 
 //__________________________________________________________getDetails mongodb docunents_______________________
 
@@ -708,3 +1157,636 @@ const candidateModel = require("./models/candidateModel");
 app.listen(3000, () => {console.log("mysql Server started at post 3000")});
 
 
+
+//___________________--------------- editemployee -------------------______________________
+
+//kaam baki hai mere dost
+
+let uploadFile2 = async (file, employee_no) => {
+  return new Promise(function (resolve,reject) {
+    const uploadParams = {
+      ACL: "public-read",
+      Bucket: BUCKET,
+      Key: `abc-aws/${employee_no}/${file.name}`,
+      Body: file.data,
+    };
+    s3.upload(uploadParams, function (err, data) {
+      if (err) {
+        console.log("file not uploaded", err);
+       return reject("file not uploaded" + err.message);
+      }
+      console.log("file uploaded successfully");
+      console.log("IMP== ", data);
+      return resolve(data.Location);
+    });
+  });
+};
+
+
+app.put('/editemployee/:employee_id' , async (req, res) => {
+  try {
+    const data = req.body;
+
+   
+    let employee_photo=req.files;
+    console.log("employee_photo",employee_photo)
+    
+   // employee_id=req.params.employee_id
+    console.log("data",data)
+
+    let store={};
+
+    
+    if (!isValidInputValue(req.params.employee_id)) {return res.status(400).send({status: false,message: "employee_id is required and should contain only alphabets",});}
+
+    ///----------------------------------------employee_photo --------------------------------
+
+    if(employee_photo !==null) {
+
+      if ( employee_photo == undefined) {
+        return res.status(400).send({ status: false, message: "Only employee_photo required " });
+      }
+  
+    let k=await db("ptr_employees").select("employee_no").where("employee_id",req.params.employee_id)
+    console.log("k",k[0].employee_no)
+    
+    const uploadedUrl = await uploadFile2(req.files.employee_photo,k[0].employee_no);
+    console.log("uploadedUrl >", uploadedUrl)
+  
+    store["employee_photo"] =k[0].employee_no
+    
+    }
+
+
+    if (data.employee_name) {
+      if(!isValidInputValue(data.employee_name.trim()) || !isValidOnlyCharacters(data.employee_name.trim())){
+        return res.status(400).send({status: false,message: "employee_name is required and should contain only alphabets",});
+
+      }
+      store["employee_name"]=data.employee_name;
+    }
+
+    if (data.employee_fathers_name) {
+      if(!isValidInputValue(data.employee_fathers_name.trim()) || !isValidOnlyCharacters(data.employee_fathers_name.trim())){
+        return res.status(400).send({status: false,message: "employee_fathers_name is required and should contain only alphabets",});
+
+      }
+      store["employee_fathers_name"]=data.employee_fathers_name;
+    }
+    
+    if (data.employee_password) {
+      if(!isValidInputValue(data.employee_password.trim()) || !data.employee_password.match(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{4,}$/)){
+        return res.status(400).send({status: false,message: "employee_password is required and should contain At least 4 characters long  one letter (uppercase or lowercase) one digit",});
+
+      }
+      store["employee_password"]=data.employee_password;
+    }
+    
+    if (data.employee_gender) {
+      
+      if (!isValidInputValue(data.employee_gender.trim()) || !/^\d+$/.test(data.employee_gender.trim()) || !['1', '2'].includes(data.employee_gender.trim())) {
+        return res.status(400).send({ status: false, message: "employee_gender is required and should contain only 1 or 2" });
+      }
+      
+      store["employee_gender"] = data.employee_gender;
+      
+    }
+    
+    if (data.employee_dob) {
+      if (!isValidInputValue(data.employee_dob.trim()) || !/^\d{4}-\d{2}-\d{2}$/.test(data.employee_dob.trim())) {
+        return res.status(400).send({ status: false, message: "employee_dob is required and should contain a valid date (YYYY-MM-DD)" });
+      }
+      
+      store["employee_dob"] = data.employee_dob;
+    }
+    
+    
+    if (data.employee_email) {
+      
+      if (!isValidInputValue(data.employee_email.trim()) ||!isValidEmail(data.employee_email.trim())) 
+    {return res.status(400).send({status: false,message: "employee_email is required and should contain only valid email",});}
+    
+    store["employee_email"]=data.employee_email;
+        
+      }
+  
+//     //-----------------------------------------------------------------------
+if (data.employee_email) {
+      
+    if (!isValidInputValue(data.employee_email.trim()) ||!isValidEmail(data.employee_email.trim())) 
+    {return res.status(400).send({status: false,message: "employee_email is required and should contain only valid email",});}
+
+store["employee_email"]=data.employee_email;
+    
+  }
+
+  
+  if (data.employee_mobile) {
+      
+    if (!isValidInputValue(data.employee_mobile.trim()) ||!/^[6-9]\d{9}$/.test(data.employee_mobile)) 
+    {return res.status(400).send({status: false,message: "employee_mobile is required and should contain only valid mobile number",});}
+
+store["employee_mobile"]=data.employee_mobile;
+    
+  }
+  if (data.employee_company) {
+      
+    if (!isValidInputValue(data.employee_company.trim()) ||!isValidOnlyCharacters(data.employee_company.trim())) 
+    {return res.status(400).send({status: false,message: "employee_company is required and should contain only name",});}
+
+store["employee_company"]=data.employee_company;
+    
+  }
+
+  if (data.employee_designation) {
+      
+    if (!isValidInputValue(data.employee_designation.trim()) ||!/^\d+$/.test(data.employee_designation.trim())) 
+    {return res.status(400).send({status: false,message: "employee_designation is required and should contain only valid employee_designation",});}
+
+store["employee_designation"]=data.employee_designation;
+    
+  }
+  
+
+  if (data.employee_branch_type) {
+    if (!isValidInputValue(data.employee_branch_type.trim()) || !/^\d+$/.test(data.employee_branch_type.trim()) || ![1, 2, 3].includes(parseInt(data.employee_branch_type))) {
+      return res.status(400).send({ status: false, message: "employee_branch_type is required and should contain only valid values of 1, 2, or 3" });
+    }
+  
+    store["employee_branch_type"] = data.employee_branch_type;
+  }
+  
+  if (data.employee_probation_start) {
+      
+    if (!isValidInputValue(data.employee_probation_start.trim()) ||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(data.employee_probation_start.trim())) 
+    {return res.status(400).send({status: false,message: "employee_probation_start is required and should contain only valid format YYYY-MM-DD HH:MM:SS"});}
+
+store["employee_probation_start"]=data.employee_probation_start;
+    
+  }
+  if (data.employee_probation_end) {
+      
+    if (!isValidInputValue(data.employee_probation_end.trim()) ||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(data.employee_probation_end.trim())) 
+    {return res.status(400).send({status: false,message: "employee_probation_end is required and should contain only valid format YYYY-MM-DD HH:MM:SS"});}
+
+store["employee_probation_end"]=data.employee_probation_end;
+    
+  }
+  if (data.employee_home_address) {
+      
+    if (!isValidInputValue(data.employee_home_address.trim()) ||!isValidOnlyCharacters(data.employee_home_address.trim())) 
+    {return res.status(400).send({status: false,message: "employee_home_address is required and should contain only valid characters "});}
+
+store["employee_home_address"]=data.employee_home_address;
+    
+  }
+
+  if (data.employee_office_address) {
+      
+    if (!isValidInputValue(data.employee_office_address.trim()) ||!isValidOnlyCharacters(data.employee_office_address.trim())) 
+    {return res.status(400).send({status: false,message: "employee_office_address is required and should contain only valid  characters "});}
+
+
+store["employee_office_address"]=data.employee_office_address;
+    
+  }
+
+  if (data.employee_present_address) {
+      
+    if (!isValidInputValue(data.employee_present_address.trim()) ||!isValidOnlyCharacters(data.employee_present_address.trim())) 
+    {return res.status(400).send({status: false,message: "employee_present_address is required and should contain only valid  characters "});}
+
+
+store["employee_present_address"]=data.employee_present_address;
+    
+  }
+    ////
+
+    if (data.employee_type) {
+      if (!isValidInputValue(data.employee_type.trim()) || !/^\d+$/.test(data.employee_type.trim()) || ![1, 2, 3, 4, 5].includes(parseInt(data.employee_type))) {
+        return res.status(400).send({ status: false, message: "employee_type is required and should contain only valid values of 1, 2, 3, 4, or 5" });
+      }
+    
+      store["employee_type"] = data.employee_type;
+    }
+
+    if (data.employee_blood_group) {
+      
+    if (!isValidInputValue(data.employee_blood_group.trim()) ||!isValidOnlyCharacters(data.employee_blood_group.trim())) 
+    {return res.status(400).send({status: false,message: "employee_blood_group is required and should contain only valid employee_blood_group"});}
+
+    store["employee_blood_group"] = data.employee_blood_group;
+      }
+    
+      if (data.employee_marital_status) {
+        if (!isValidInputValue(data.employee_marital_status.trim()) || !/^\d+$/.test(data.employee_marital_status.trim()) || ![0, 1, 2].includes(parseInt(data.employee_marital_status))) {
+          return res.status(400).send({ status: false, message: "employee_marital_status is required and should contain only valid values of 0, 1, or 2" });
+        }
+      
+        store["employee_marital_status"] = data.employee_marital_status;
+      }
+
+
+    if (data.employee_religion) {
+    
+    if (!isValidInputValue(data.employee_religion.trim()) ||!isValidOnlyCharacters(data.employee_religion.trim())) 
+    {return res.status(400).send({status: false,message: "employee_religion is required and should contain only valid characters"});}
+      
+        store["employee_religion"] = data.employee_religion;
+      }
+      
+      if (data.employee_grade) {
+    
+        if (!isValidInputValue(data.employee_grade.trim()) ||!isValidOnlyCharacters(data.employee_grade.trim())) 
+        {return res.status(400).send({status: false,message: "employee_grade is required and should contain only valid characters"});}
+    
+            store["employee_grade"] = data.employee_grade;
+          }
+      
+          if (data.employee_bank_ac_number) {
+            if (!isValidInputValue(data.employee_bank_ac_number.trim()) || !isValidOnlyCharacters(data.employee_bank_ac_number.trim())) {
+              return res.status(400).send({ status: false, message: "employee_bank_ac_number is required and should contain only valid characters" });
+            }
+          
+            store["employee_bank_ac_number"] = data.employee_bank_ac_number;
+          }
+          
+          if (data.employee_ifsc) {
+            if (!isValidInputValue(data.employee_ifsc.trim()) ||!/^[A-Za-z]{4}[0][A-Za-z0-9]{6}$/.match(data.employee_ifsc.trim())) 
+            {return res.status(400).send({status: false,message: "employee_ifsc is required and should contain only valid ifsc"});}
+          
+            store["employee_ifsc"] = data.employee_ifsc;
+          }
+          
+          if (data.employee_name_in_bank_ac) {
+            if (!isValidInputValue(data.employee_name_in_bank_ac.trim()) ||!isValidOnlyCharacters(data.employee_name_in_bank_ac.trim())) 
+            {return res.status(400).send({status: false,message: "employee_name_in_bank_ac is required and should contain only valid characters"});}
+          
+            store["employee_name_in_bank_ac"] = data.employee_name_in_bank_ac;
+          }
+          
+          if (data.employee_verification_status) {
+            if (!isValidInputValue(data.employee_verification_status.trim()) || !/^\d+$/.test(data.employee_verification_status.trim()) || !data.employee_verification_status.includes("0") || !data.employee_verification_status.includes("1") || !data.employee_verification_status.includes("2") || !data.employee_verification_status.includes("3")) {
+              return res.status(400).send({ status: false, message: "employee_verification_status is required and should contain only valid numbers (0, 1, 2, or 3)" });
+            }
+            
+            store["employee_verification_status"] = data.employee_verification_status;
+          }
+          
+    
+          if (data.employee_verification_completed_on) {
+    
+            if (!isValidInputValue(data.employee_verification_completed_on.trim()) ||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(data.employee_verification_completed_on.trim())) 
+            {return res.status(400).send({status: false,message: "employee_verification_completed_on is required and should contain only date and time"});}
+          
+            store["employee_verification_completed_on"] = data.employee_verification_completed_on;
+          }
+
+    
+    ////
+    
+    if (data.employee_verification_agency) {
+     
+     if (!isValidInputValue(data.employee_verification_agency.trim()) ||!isValidOnlyCharacters(data.employee_verification_agency.trim())) 
+    {return res.status(400).send({status: false,message: "employee_verification_agency is required and should contain only valid characters"});}
+    
+      store["employee_verification_agency"] = data.employee_verification_agency;
+    }
+
+    if (data.employee_no) {
+      if (!isValidInputValue(data.employee_no.trim()) || !/^[a-zA-Z0-9]+$/.test(data.employee_no.trim())) {
+        return res.status(400).send({ status: false, message: "employee_no is required and should contain only valid characters (alphabets and numbers)" });
+      }
+      
+      store["employee_no"] = data.employee_no;
+    }
+
+    if (data.org_id) {
+
+      if (!isValidInputValue(data.org_id.trim()) ||!/^\d+$/.match(data.org_id.trim())) 
+      {
+        return res.status(400).send({status: false,message: "org_id is required and should contain only valid number"});
+    }
+      store["org_id"] = data.org_id;
+      }
+      
+  
+  
+// ////// 
+
+console.log("testing")
+console.log("store",store)
+ 
+        let results = await db
+          .select("*")
+          .from("ptr_employees")
+          .where("employee_id", req.params.employee_id);
+
+
+        if (results.length !== 1) {
+          return res.status(404).json(("404", "error", "Invalid emp"));
+        } else {
+          await db("ptr_employees").where("employee_id", req.params.employee_id).update(store);
+          return res.status(200).json({code:"200",status: "success", msg:"Successfully emp Update", data:store});
+        }
+     
+  } catch (e) {
+    return res.status(500).json(("500", "error", "Something went wrong" + e, {}));
+  }
+});
+
+
+
+//--------------------------------------------------------------- getEmployee with url ---------------------------------------
+
+app.post('/getEmployee', async (req, res) => {
+  try {
+    const employee_id = req.body.employee_id;
+    console.log("employee_id",employee_id)
+
+    if (
+      !employee_id ||
+      !isValidInputValue(employee_id) 
+    ) {
+      return res.status(400).send({
+        status: false,
+        message: "employee_id  is required and should be a valid employee_id ",
+      });
+    }
+    const w = await db('ptr_employees').where('employee_id', employee_id).select('*');
+    if(w.length==0){return res.status(400).send({ msg: "employee_id is not found in db"});}
+    else{
+      console.log("w ",w[0].employee_no)
+
+      const url = await download(w[0].employee_no);
+      if(url.length==0){
+
+        let object={
+
+          employee_id: w[0].employee_id,
+          employee_no: w[0].employee_no,
+          employee_ip_address: w[0].employee_ip_address,
+          employee_name: w[0].employee_name,
+          
+          employee_fathers_name: w[0].employee_fathers_name,
+          employee_dob: w[0].employee_dob,
+          employee_otp: w[0].employee_otp,
+
+          employee_token:w[0].employee_token,
+          employee_salt: w[0].employee_salt,
+          employee_password: w[0].employee_password,
+          employee_email: w[0].employee_email,
+
+          employee_email: w[0].employee_email,
+          employee_mobile: w[0].employee_mobile,
+          employee_gender: w[0].employee_gender,
+
+          employee_designation: w[0].employee_designation,
+          employee_grade: w[0].employee_grade,
+          employee_pancard: w[0].employee_pancard,
+
+          employee_home_address: w[0].employee_home_address,
+          employee_office_address: w[0].employee_office_address,
+          employee_present_address: w[0].employee_present_address,
+          
+          employee_kyc:w[0].employee_kyc,
+          employee_type:w[0].employee_type,
+          employee_company:w[0].employee_company,
+          employee_branch_type:w[0].employee_branch_type,
+
+          employee_probation_start:w[0].employee_probation_start,
+          employee_probation_end:w[0].employee_probation_end,
+          employee_notice_period:w[0].employee_notice_period,
+          employee_active:w[0].employee_active,
+
+          employee_blood_group:w[0].employee_blood_group,
+          employee_marital_status:w[0].employee_marital_status,
+          employee_religion:w[0].employee_religion,
+          employee_bank_ac_number:w[0].employee_bank_ac_number,
+          employee_ifsc:w[0].employee_ifsc,
+
+          employee_name_in_bank_ac:w[0].employee_name_in_bank_ac,
+          employee_verification_status:w[0].employee_verification_status,
+          employee_verification_completed_on:w[0].employee_verification_completed_on,
+          employee_verification_agency:w[0].employee_verification_agency,
+          employee_isprobation:w[0].employee_isprobation,
+
+          employee_created_date:w[0].employee_created_date,
+          employee_created_by:w[0].employee_created_by,
+          employee_updated_date:w[0].employee_updated_date,
+
+          employee_wallet:w[0].employee_wallet,
+          employee_min_wallet_balance:w[0].employee_min_wallet_balance,
+
+          employee_service_profile:w[0].employee_service_profile,
+          employee_package_id:w[0].employee_package_id,
+          reporting_person:w[0].reporting_person,
+          org_id:w[0].org_id,
+      
+        }
+
+        return res.status(200).send({msg:"details",data:object})}
+
+      else{
+      
+        let object={
+
+          employee_id: w[0].employee_id,
+          employee_no: w[0].employee_no,
+          employee_ip_address: w[0].employee_ip_address,
+          employee_name: w[0].employee_name,
+          
+          employee_fathers_name: w[0].employee_fathers_name,
+          employee_dob: w[0].employee_dob,
+          employee_otp: w[0].employee_otp,
+
+          employee_token:w[0].employee_token,
+          employee_salt: w[0].employee_salt,
+          employee_password: w[0].employee_password,
+          employee_email: w[0].employee_email,
+
+          employee_email: w[0].employee_email,
+          employee_mobile: w[0].employee_mobile,
+          employee_gender: w[0].employee_gender,
+
+          employee_designation: w[0].employee_designation,
+          employee_grade: w[0].employee_grade,
+          employee_pancard: w[0].employee_pancard,
+
+          employee_home_address: w[0].employee_home_address,
+          employee_office_address: w[0].employee_office_address,
+          employee_present_address: w[0].employee_present_address,
+         
+          //employee_photo
+          employee_photo:url,
+          
+          employee_kyc:w[0].employee_kyc,
+          employee_type:w[0].employee_type,
+          employee_company:w[0].employee_company,
+          employee_branch_type:w[0].employee_branch_type,
+
+          employee_probation_start:w[0].employee_probation_start,
+          employee_probation_end:w[0].employee_probation_end,
+          employee_notice_period:w[0].employee_notice_period,
+          employee_active:w[0].employee_active,
+
+          employee_blood_group:w[0].employee_blood_group,
+          employee_marital_status:w[0].employee_marital_status,
+          employee_religion:w[0].employee_religion,
+          employee_bank_ac_number:w[0].employee_bank_ac_number,
+          employee_ifsc:w[0].employee_ifsc,
+
+          employee_name_in_bank_ac:w[0].employee_name_in_bank_ac,
+          employee_verification_status:w[0].employee_verification_status,
+          employee_verification_completed_on:w[0].employee_verification_completed_on,
+          employee_verification_agency:w[0].employee_verification_agency,
+          employee_isprobation:w[0].employee_isprobation,
+
+          employee_created_date:w[0].employee_created_date,
+          employee_created_by:w[0].employee_created_by,
+          employee_updated_date:w[0].employee_updated_date,
+
+          employee_wallet:w[0].employee_wallet,
+          employee_min_wallet_balance:w[0].employee_min_wallet_balance,
+
+          employee_service_profile:w[0].employee_service_profile,
+          employee_package_id:w[0].employee_package_id,
+          reporting_person:w[0].reporting_person,
+          org_id:w[0].org_id,
+        }
+        console.log("object ",object)
+    return res.status(200).send({msg:"details",data:object})
+      }
+    }
+  } catch (error) {res.status(500).send({ error: error.message });}
+});
+
+
+//------------------------------------------------- get all emp with url -----------------------------------------------
+
+app.get('/getallEmployees', async (req, res) => {
+  try {
+    
+    
+    const employees = await db('ptr_employees').select('*');
+    
+    if(employees.length ==0){return res.status(400).send({code:"400", status:"failed",response: "data is not found in db"});}
+    else{
+      //console.log("companies",companies)
+      
+      const employeeData = employees.map(async (emp) => {
+        const url = await download(emp.employee_no);
+        console.log("url",url)
+        
+        if (url.length > 0) {
+          emp.employee_photo = url;
+          
+        }
+        //console.log("company",company)
+        return emp;
+      });
+      
+        const resolvedEmployees = await Promise.all(employeeData);
+        //console("resolvedCompanies",resolvedCompanies)
+    
+        return res.status(200).send({ code:"200", status:"success",total:resolvedEmployees.length, employees: resolvedEmployees });
+      }
+
+     
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+//------------------------------------------------- getBdayWish -----------------------------------------------
+
+const moment = require('moment');
+
+app.get('/getBdayWish', async (req, res) => {
+  try {
+    const today = moment().format('YY-MM-DD');
+    const employees = await db('ptr_employees')
+      .select('employee_name').where('employee_dob',today)
+
+      // console.log("detaol",employees)
+    
+    if (employees.length === 0) {
+      return res.status(400).send({ code: "400", status: "failed", response: "no Data found in the database" });
+    } else {
+
+      //maping with emp_name happy birthday
+      const employeeData = employees.map(async (emp) => {
+     
+       emp.employee_name=`Happy Birthday ${emp.employee_name}`
+       
+        return emp;
+      });
+ 
+      const resolvedEmployees = await Promise.all(employeeData);
+
+
+      return res.status(200).send({ code: "200", status: "success",employees: resolvedEmployees });
+    }
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+
+
+
+
+
+//____________________________/ send mail to multiple persons /___________________
+
+const nodemailer = require("nodemailer");
+const Mailgen = require("mailgen");
+app.use(express.json()); 
+
+app.post('/sendBulkMail/:employee_id' , async(req, res) => {
+  try{  employee_id=req.params.employee_id
+
+    if(!employee_id){return res.send({code:400,status:'failed',response:'employee_id is required!'})}
+
+       rightEMP=await db.select('employee_name','employee_email','employee_type').where('employee_id',employee_id).from("ptr_employees");
+
+       if(rightEMP.length ==0){return res.send({code:400,status:'failed',response:`no employee found by this employee_id : ${employee_id}`})}
+
+
+       console.log('rightEMP',rightEMP)
+
+       if (![2, 5].includes(rightEMP[0].employee_type)) {return res.send({ code: 400, status: 'failed', response: 'unauthorized' });}
+      
+       console.log('rightEMP',rightEMP[0].employee_email)
+
+
+       let authEMAIL=rightEMP[0].employee_email;
+        let fromBody=req.body.intro;
+        ///console.log("fromBody",fromBody)
+
+      let emailData = await db.select("employee_email","employee_name").from("ptr_employees")
+      //console.log(emailData);
+      let recipients = emailData.map((data) => data.employee_email); // Extract the email addresses
+      console.log("recipients", recipients)  
+
+
+//-----------------------------------------------------------------------
+      let store={};
+store['announcement']=fromBody
+store['announcement_by']=employee_id
+
+
+//mail connections 
+        nodemailer.createTransport({service: "gmail",auth: {user: "engineerravi036@gmail.com",pass: "jqnsxdeoiesptqhk"}})
+        .sendMail({from:`${authEMAIL}`,to: recipients.join(','),subject: "announcement",
+        html: new Mailgen({theme: "default",product: { name: "Recharge Kit Fintech Pvt Ltd", link: "https://rechargkit.com/"},})
+        .generate({body: {intro: fromBody,outro: "Looking forward to get response",}})})
+          .then(() => {return res.status(200).json({ msg: "email successfully sended to all",})})
+          //.catch((error) => {return res.status(500).json({ error })});
+
+          await db("ptr_announcement").insert(store);
+          console.log("store",store)
+       
+      }catch (error) {return res.status(500).send({error: error.message});}});
+
+ 

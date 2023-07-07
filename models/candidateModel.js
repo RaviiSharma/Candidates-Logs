@@ -11,7 +11,7 @@ const candidateSchema = new mongoose.Schema({
     },
     candidate_name: {
         type: String,
-        required: [true, "User Name is required"],
+        //required: [true, "User Name is required"],
         trim: true,
     },
     candidate_ref_no: {
@@ -35,9 +35,9 @@ const candidateSchema = new mongoose.Schema({
         trim: true,
     },
     candidate_resume: {
-        type: String,
+       /// type: String,
        // required: [true, " required"],
-        trim: true,
+        //trim: true,
     },
     candidate_remarks: {
         type: String,
