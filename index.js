@@ -1182,12 +1182,14 @@ let uploadFile2 = async (file, employee_no) => {
   });
 };
 
+//________________________________- editemployee -____________________________________
+
 
 app.put('/editemployee/:employee_id' , async (req, res) => {
   try {
     const data = req.body;
 
-   
+
     let employee_photo=req.files;
     console.log("employee_photo",employee_photo)
     
@@ -1199,7 +1201,7 @@ app.put('/editemployee/:employee_id' , async (req, res) => {
     
     if (!isValidInputValue(req.params.employee_id)) {return res.status(400).send({status: false,message: "employee_id is required and should contain only alphabets",});}
 
-    ///----------------------------------------employee_photo --------------------------------
+    ///------employee_photo -----
 
     if(employee_photo !==null) {
 
@@ -1209,6 +1211,7 @@ app.put('/editemployee/:employee_id' , async (req, res) => {
   
     let k=await db("ptr_employees").select("employee_no").where("employee_id",req.params.employee_id)
     console.log("k",k[0].employee_no)
+    if(k.length==0){ return res.status(400).send({status: false,message: "data not found",});}
     
     const uploadedUrl = await uploadFile2(req.files.employee_photo,k[0].employee_no);
     console.log("uploadedUrl >", uploadedUrl)
@@ -1791,220 +1794,100 @@ store['announcement_by']=employee_id
 
 
 
-//------------------------------------ exprience letter api --------------------------------------------------
+//------------------------------------  letter api by employee_id [hr,admin] --------------------------------------------------
 
 
-app.post('/letterAPI/:employee_id' , async(req, res) => {
-  try{  employee_id=req.params.employee_id
-    let data =req.body;
-  
-    let bucket=[];
+const fs = require('fs');
 
+app.post('/letterAPI/:employee_id', async (req, res) => {
+  try {
+    const { employee_id } = req.params;
+    const data = req.body;
 
-    let {employee_name,employee_fathers_name,employee_designation,employee_branch_type,
-      employee_joining_date,employee_leaving_date,company_name,company_logo,employee_salary,letter_type}=data;
+    const {
+      employee_name,
+      employee_fathers_name,
+      employee_designation,
+      employee_branch_type,
+      employee_joining_date,
+      employee_leaving_date,
+      company_name,
+      company_logo,
+      employee_salary,
+      letter_type
+    } = data;
 
+    if (!employee_id || !letter_type) {
+      return res.status(400).send({
+        code: 400,
+        status: 'failed',
+        response: 'employee_id and letter_type are required!'
+      });
+    }
 
-    if(!employee_id){return res.send({code:400,status:'failed',response:'employee_id is required!'})}
+    const rightEMP = await db
+      .select('employee_name', 'employee_email', 'employee_type')
+      .where('employee_id', employee_id)
+      .from('ptr_employees');
 
-       rightEMP=await db.select('employee_name','employee_email','employee_type').where('employee_id',employee_id).from("ptr_employees");
+    if (rightEMP.length === 0 || ![2, 5].includes(rightEMP[0].employee_type)) {
+      return res.status(400).send({
+        code: 400,
+        status: 'failed',
+        response: 'Unauthorized'
+      });
+    }
 
-       if(rightEMP.length ==0){return res.send({code:400,status:'failed',response:`no employee found by this employee_id : ${employee_id}`})}
-      
-       
+    const dbLetter_type = await db
+      .select('letter_type')
+      .where('letter_id', letter_type)
+      .from('ptr_letters');
 
+    if (dbLetter_type.length === 0) {
+      return res.status(400).send({
+        code: 400,
+        status: 'failed',
+        response: `No letter_type found by this letter_id: ${letter_type}`
+      });
+    }
 
-       if (![2, 5].includes(rightEMP[0].employee_type)) {return res.send({ code: 400, status: 'failed', response: 'unauthorized' });}
-      
-       console.log('rightEMP',rightEMP[0].employee_email)
+    const url = await download(company_logo);
+    if (url.length === 0) {
+      return res.status(400).send({ message: 'company_logo not found' });
+    }
 
-       let rightName=rightEMP[0].employee_name
-       let empType="HR";
+    var html;
 
-        if ( !isValidInputValue(employee_name)) { return res.status(400).send({ status: false, message: "employee_name required " });}
-    
-        if ( !isValidInputValue(employee_fathers_name)) { return res.status(400).send({ status: false, message: "employee_fathers_name required " });}
+    if(dbLetter_type[0].letter_type=='Offer Letter'){
+      console.log("dd")
+       html = fs.readFileSync('offerLetter.html', 'utf8');
+     }else if(dbLetter_type[0].letter_type=='Experience Letter'){
 
-        if ( !isValidInputValue(employee_designation)) { return res.status(400).send({ status: false, message: "employee_designation required " }); }
+       html = fs.readFileSync('experienceLetter.html', 'utf8');
+     }else if(dbLetter_type[0].letter_type=='Internship Letter'){
+      html = fs.readFileSync('internshipLetter.html', 'utf8');
+     }
 
-        if ( !isValidInputValue(employee_branch_type)) { return res.status(400).send({ status: false, message: "employee_branch_type required " }); }
+    const replacements = {
+      '[COMPANY_LOGO]': url[2],
+      '[EMPLOYEE_NAME]': employee_name,
+      '[employee_fathers_name]': employee_fathers_name,
+      '[employee_designation]': employee_designation,
+      '[employee_branch_type]': employee_branch_type,
+      '[COMPANY_NAME]': company_name,
+      '[START_DATE]': employee_joining_date,
+      '[SALARY]': employee_salary,
+      '[empType]': 'HR',
+      '[rightName]': rightEMP[0].employee_name,
+      '[employee_joining_date]': employee_joining_date,
+      '[employee_leaving_date]': employee_leaving_date,
+      '[CONTACT_INFORMATION]': '1236788888'
+    };
 
-        if ( !isValidInputValue(employee_joining_date)) { return res.status(400).send({ status: false, message: "employee_joining_date required " }); }
+    const modifiedHTML = html.replace(/(\[.*?\])/g, (match) => replacements[match] || match);
 
-        if ( !isValidInputValue(employee_leaving_date)) { return res.status(400).send({ status: false, message: "employee_leaving_date required " }); }
-
-        if ( !isValidInputValue(company_name)) { return res.status(400).send({ status: false, message: "company_name required " }); }
-
-        if ( !isValidInputValue(company_logo)) { return res.status(400).send({ status: false, message: "company_logo required " }); }
-
-        if ( !isValidInputValue(employee_salary)) { return res.status(400).send({ status: false, message: "employee_salary required " }); }
-
-      const url = await download(company_logo);
-      if(url.length==0){return res.status(400).send({message:"company_logo not found"})}
-      
-      console.log("url",url[2])
-    
-      bucket={
-        employee_name:employee_name,employee_fathers_name:employee_fathers_name,employee_designation:employee_designation,
-        employee_branch_type:employee_branch_type,employee_joining_date:employee_joining_date,
-        employee_leaving_date:employee_leaving_date,
-        company_name:company_name,
-        company_logo:url[2],
-        employee_salary:employee_salary,
-        letter_type:letter_type
-      }
-
-      const bucketArray = [];
-      bucketArray.push(bucket);
-
-
-//------------------------------------------------- HTML FORM ----------------------------------------------
-const formContainerId = 'formContainer';
-const letterForms = bucketArray.map((bucketObj) => {
-  const letterHTML = `
-  <h2>${bucketObj.letter_type}</h2>
-
-    <p><strong></strong> <img src="${bucketObj.company_logo}" alt="Company Logo"></p>
-    ${bucketObj.company_name}
-    
-    <br>
-    <br>
-    Dear ${bucketObj.employee_name},
-    <br>
-
-    We are delighted to offer you the role of Backend Developer at ${bucketObj.company_name}.
-    We believe you have the qualifications and skills required to excel in this position.
-   <br>
-   <br>
-    Position: Backend Developer
-    <br>
-    Start Date: ${bucketObj.employee_joining_date}
-    <br>
-    Salary: ${bucketObj.employee_salary} per months.
-<br>
-<br>
-    Responsibilities:
-    <br>
-    - Develop and maintain backend solutions.
-    <br>
-    - Collaborate with teams on API and database design.
-    <br>
-    - Optimize code for performance and reliability.
-    <br>
-    - Troubleshoot and resolve technical issues.
-    <br>
-    - Stay updated with industry best practices.
-
-    <br>
-    <br>
-
-    Qualifications:
-    <br>
-    - Bachelor's degree in Computer Science or related field.
-    <br>
-    - Strong backend programming skills.
-    <br>
-    - Experience with database management systems.
-    <br>
-    - Familiarity with RESTful APIs and version control systems.
-    <br>
-    - Excellent problem-solving and communication skills.
-
-    <br>
-    <br>
-
-    Benefits:
-    <br>
-    - Competitive salary
-    <br>
-    - Health insurance
-    <br>
-    - Retirement plan
-    <br>
-    - Paid time off
-    <br>
-    - Professional development opportunities
-
-    <br>
-    <br>
-
-    Please sign and return a copy of this letter to accept our offer. If you have any questions, feel free to contact us at [Contact Information].
-
-    <br>
-    <br>
-
-    We look forward to welcoming you to our team and working together to achieve great things!
-
-    <br>
-    <br>
-
-    Sincerely,
-    <br>
-    <br>
-    ${empType}
-    <br>
-    ${rightName}
-    <br>
-    ${bucketObj.company_name}
-  `;
-
-  return `<form>${letterHTML}</form>`;
+    return res.status(200).send(modifiedHTML);
+  } catch (error) {
+    return res.status(500).send({ error: error.message });
+  }
 });
-
-let bucket2 = {
-  created_by: employee_id,
-  letter_type: bucketArray[0].letter_type // type of letter
-};
-
-console.log("bucket2", bucket2);
-
-await db('ptr_letters').insert(bucket2);
-
-
-const responseHTML = `
-  <html>
-    <head>
-      <title>Experience Letters</title>
-    </head>
-    <body>
-      <div id="${formContainerId}">
-        ${letterForms.join('\n')}
-      </div>
-    </body>
-  </html>
-`;
-
-return res.status(200).send(responseHTML);
-
-
-
-
-  //return res.status(200).send({status: true,message: "done",data:bucketArray});
-
-       
- }catch (error) {return res.status(500).send({error: error.message});}});
- 
-
-
-
-/**  for  EXPRIENCE LETTER FORMAT
- * 
- *     <h2>${bucketObj.letter_type}</h2>
-
-    This letter is to certify that ${bucketObj.employee_name} s/o shri ${bucketObj.employee_fathers_name}
-    has worked in our organization as ${bucketObj.employee_designation} in department ${bucketObj.employee_branch_type}.
-
-    He had started working here on ${bucketObj.employee_joining_date} and worked till ${bucketObj.employee_leaving_date}.
-
-    He had been very responsible till the date he had joined. He had enriched himself with lots of skills and work experiences to date. Some of his mind-blowing skills include(mention his best skills).
-
-    He had been paid ${bucketObj.employee_salary} as salary on a per month basis. Apart from his love and devotion he had also been a very good and kind man and
-    always maintained a good relationship with everyone. We are really glad to have such a generous personality among us.
-
-    Wishing him the best of his luck in his career.
-
-    Sincerely,
-  
-    ${bucketObj.company_name}
-    <p><strong></strong> <img src="${bucketObj.company_logo}" alt="Company Logo"></p>
- */
