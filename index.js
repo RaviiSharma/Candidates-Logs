@@ -9,6 +9,11 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended:true }))
 app.use(upload());
 
+// ----------------------------------- validations here -------------------------------
+
+const {validInputValue,validOnlyCharacters,validEmail,validPhone,validNumber,validPincode,validPrice,validObjectId,validImageType,
+  ValidPassword,validDigit,validDate,validDateTime,validIFSC,validCharNum} = require('../validations');
+  
 
 //aws_____________________________________________________________________
 
@@ -77,25 +82,6 @@ const download = async (company_email) => {
   };
 
   
-//_________________________________________To post a data
-
-
-//check valid value || not empty value
-const isValidInputValue = function (value) {
-  // console.log("data", value.organization_email)
-  if (typeof value === "undefined" || value === null) return false;
-  if (typeof value === "string" && value.trim().length > 0) return true;
-  return false;
-};
-//check valid name
-const isValidOnlyCharacters = function (value) {
-  return /^[A-Za-z]+$/.test(value);
-};
-//valid email
-const isValidEmail = function (email) {
-  const regexForEmail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  return regexForEmail.test(email);
-};
 
 //____________________________________________post api__________
 
@@ -114,7 +100,7 @@ app.post("/postData",async (req, res) => {
     
       if (
         !organization_id ||
-        !isValidInputValue(organization_id.trim()) 
+        !validInputValue(organization_id) 
       ) {
         return res.status(400).send({
           status: false,
@@ -123,8 +109,8 @@ app.post("/postData",async (req, res) => {
       }
               if (
                 !company_name ||
-                !isValidInputValue(company_name.trim()) ||
-                !isValidOnlyCharacters(company_name.trim())
+                !validInputValue(company_name) ||
+                !validOnlyCharacters(company_name)
               ) {
                 return res.status(400).send({
                   status: false,
@@ -133,8 +119,8 @@ app.post("/postData",async (req, res) => {
               }
               if (
                 !company_email ||
-                !isValidInputValue(company_email) ||
-                !isValidEmail(company_email)
+                !validInputValue(company_email) ||
+                !validEmail(company_email)
               ) {
                 return res.status(400).send({
                   status: false,
@@ -143,7 +129,7 @@ app.post("/postData",async (req, res) => {
               }
 
               
-              if (!company_location || !isValidInputValue(company_location) || !isValidOnlyCharacters(company_location)) {
+              if (!company_location || !validInputValue(company_location) || !validOnlyCharacters(company_location)) {
                 return res.status(400).send({
                   status: false,
                   message: "company_location  required and should contain only alphabets",
@@ -155,12 +141,12 @@ app.post("/postData",async (req, res) => {
                     .status(400)
                     .send({ status: false, message: "no company_logo image found" });
             }
-            //if (!isValidImageType(company_logo.mimetype)) {return res.status(400).send({ status: false, message: "Only company_logo can be uploaded (jpeg/jpg/png/pdf)" })}
+            //if (!validImageType(company_logo.mimetype)) {return res.status(400).send({ status: false, message: "Only company_logo can be uploaded (jpeg/jpg/png/pdf)" })}
 
             
               if (
                 !company_website ||
-                !isValidInputValue(company_website.trim()) || !company_website.match(/^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+\.){1,}[a-zA-Z0-9-]{2,}$/)
+                !validInputValue(company_website) || !company_website.match(/^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+\.){1,}[a-zA-Z0-9-]{2,}$/)
                 
               ) {
                 return res.status(400).send({
@@ -172,7 +158,7 @@ app.post("/postData",async (req, res) => {
 
               if (
                 !company_gst ||
-                !isValidInputValue(company_gst.trim()) || !company_gst.match(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/)
+                !validInputValue(company_gst) || !company_gst.match(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/)
               ) {
                 return res.status(400).send({
                   status: false,
@@ -199,7 +185,7 @@ app.post("/postData",async (req, res) => {
               
               if (
                 !company_PAN_no ||
-                !isValidInputValue(company_PAN_no.trim()) ||
+                !validInputValue(company_PAN_no) ||
                 !company_PAN_no.match(/^([A-Z]{5})(\d{4})([A-Z]{1})$/)
               ) {
                 return res.status(400).send({
@@ -209,7 +195,7 @@ app.post("/postData",async (req, res) => {
               }
               if (
                 !compant_TAN_no ||
-                !isValidInputValue(compant_TAN_no.trim()) ||
+                !validInputValue(compant_TAN_no) ||
                 !compant_TAN_no.match(/^([A-Z]{4})(\d{5})([A-Z]{1})$/)
               ) {
                 return res.status(400).send({
@@ -276,7 +262,7 @@ app.put('/updateCompany/:company_id',  async (req, res) => {
     company_financialyear_end,compant_TAN_no,company_PAN_no} = payload;
 
     if(company_email){
-      if (!isValidInputValue(company_email) ||!isValidEmail(company_email)) {
+      if (!validInputValue(company_email) ||!validEmail(company_email)) {
         return res.status(400).send({
           status: false,
           message: "company_email address is required and should be a valid email address and you have to also update company_log",});
@@ -334,8 +320,8 @@ app.put('/updateCompany/:company_id',  async (req, res) => {
 
       if (
         !company_email ||
-        !isValidInputValue(company_email) ||
-        !isValidEmail(company_email)
+        !validInputValue(company_email) ||
+        !validEmail(company_email)
       ) {
         return res.status(400).send({
           status: false,
@@ -361,7 +347,7 @@ app.put('/updateCompany/:company_id',  async (req, res) => {
 
       if (
         !company_id ||
-        !isValidInputValue(company_id) 
+        !validInputValue(company_id) 
       ) {
         return res.status(400).send({
           status: false,
@@ -443,7 +429,7 @@ app.post('/getall', async (req, res) => {
     const organization_id = req.body.organization_id;
     console.log("organization_id", organization_id);
 
-    if (!organization_id || !isValidInputValue(organization_id)) {
+    if (!organization_id || !validInputValue(organization_id)) {
       return res.status(400).send({
         status: false,
         message: "organization_id is required and should be a valid organization_id",
@@ -496,8 +482,8 @@ const db = knex({
   });
 
 
-//_____________validate if some extra fields are present in the request_________________________________________
-  const validateExtraFields = (data, fields) => {
+//_____________valid if some extra fields are present in the request_________________________________________
+  const validExtraFields = (data, fields) => {
     let extraFields = [];
     for (let key in data) {
       if (!fields.includes(key)) {
@@ -537,17 +523,17 @@ const response = (code, status, message, data = "", count = false) => {
   //_________________________________________________________update in sql table and create in mongodb documents______________
   app.put('/updateCandidateDetails', async (req, res) => {
     try {
-      //validate candidate
+      //valid candidate
       const expectedField = [
         "candidate_id","candidate_name","candidate_gender", "candidate_dob", "candidate_email", "candidate_mobile","candidate_address",
         "candidate_company","candidate_qualification","candidate_applied_dept","candidate_experience", "candidate_ref_no","candidate_resume",
         "candidate_remarks","candidate_interview_date","candidate_interview_time","candidate_updated_by","candidate_is_called","candidate_letter"
       ];
       //if payload field is not match with expected field
-      // console.log(helpers.validateExtraFields(req.body, expectedField));
+      // console.log(helpers.validExtraFields(req.body, expectedField));
       if (
-        !validateExtraFields(req.body, expectedField) ||
-        !validateExtraFields(req.params, ["id"])
+        !validExtraFields(req.body, expectedField) ||
+        !validExtraFields(req.params, ["id"])
       ) {
         return res
           .status(404)
@@ -1079,7 +1065,7 @@ const response = (code, status, message, data = "", count = false) => {
       const candidate_id = req.body.candidate_id;
       console.log("candidate_id", candidate_id);
 
-      if (isValidInputValue(candidate_id)) {
+      if (validInputValue(candidate_id)) {
         const result = await candidateModel.find({
           candidate_id: `candidate_id is : ${candidate_id}`,
         });
@@ -1156,11 +1142,7 @@ const candidateModel = require("./models/candidateModel");
 
 app.listen(3000, () => {console.log("mysql Server started at post 3000")});
 
-
-
-//___________________--------------- editemployee -------------------______________________
-
-//kaam baki hai mere dost
+//________________________________- editemployee -____________________________________
 
 let uploadFile2 = async (file, employee_no) => {
   return new Promise(function (resolve,reject) {
@@ -1182,321 +1164,195 @@ let uploadFile2 = async (file, employee_no) => {
   });
 };
 
-//________________________________- editemployee -____________________________________
+///
 
-
-app.put('/editemployee/:employee_id' , async (req, res) => {
+app.put('/editemployee/:employee_id', async (req, res) => {
   try {
     const data = req.body;
+    const employeePhoto = req.files && req.files.employee_photo;
 
+    const store = {};
 
-    let employee_photo=req.files;
-    console.log("employee_photo",employee_photo)
-    
-   // employee_id=req.params.employee_id
-    console.log("data",data)
-
-    let store={};
-
-    
-    if (!isValidInputValue(req.params.employee_id)) {return res.status(400).send({status: false,message: "employee_id is required and should contain only alphabets",});}
-
-    ///------employee_photo -----
-
-    if(employee_photo !==null) {
-
-      if ( employee_photo == undefined) {
-        return res.status(400).send({ status: false, message: "Only employee_photo required " });
-      }
-  
-    let k=await db("ptr_employees").select("employee_no").where("employee_id",req.params.employee_id)
-    console.log("k",k[0].employee_no)
-    if(k.length==0){ return res.status(400).send({status: false,message: "data not found",});}
-    
-    const uploadedUrl = await uploadFile2(req.files.employee_photo,k[0].employee_no);
-    console.log("uploadedUrl >", uploadedUrl)
-  
-    store["employee_photo"] =k[0].employee_no
-    
+    // valid employee_id
+    if (!validInputValue(req.params.employee_id)) {
+      return res.status(400).send({ status: false, message: "employee_id is required and should contain only alphabets" });
     }
+    store["employee_id"] = req.params.employee_id;
 
-
+    // valid other fields
     if (data.employee_name) {
-      if(!isValidInputValue(data.employee_name.trim()) || !isValidOnlyCharacters(data.employee_name.trim())){
-        return res.status(400).send({status: false,message: "employee_name is required and should contain only alphabets",});
-
-      }
-      store["employee_name"]=data.employee_name;
+      if(!validInputValue(data.employee_name) || !validOnlyCharacters(data.employee_name));
+      store["employee_name"] = data.employee_name;
     }
 
     if (data.employee_fathers_name) {
-      if(!isValidInputValue(data.employee_fathers_name.trim()) || !isValidOnlyCharacters(data.employee_fathers_name.trim())){
-        return res.status(400).send({status: false,message: "employee_fathers_name is required and should contain only alphabets",});
-
-      }
+      if(!validInputValue(data.employee_fathers_name) || !validOnlyCharacters(data.employee_fathers_name));
       store["employee_fathers_name"]=data.employee_fathers_name;
     }
     
     if (data.employee_password) {
-      if(!isValidInputValue(data.employee_password.trim()) || !data.employee_password.match(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{4,}$/)){
-        return res.status(400).send({status: false,message: "employee_password is required and should contain At least 4 characters long  one letter (uppercase or lowercase) one digit",});
-
-      }
+      if(!validInputValue(data.employee_password) || !ValidPassword(data.employee_password));
       store["employee_password"]=data.employee_password;
     }
-    
+
     if (data.employee_gender) {
-      
-      if (!isValidInputValue(data.employee_gender.trim()) || !/^\d+$/.test(data.employee_gender.trim()) || !['1', '2'].includes(data.employee_gender.trim())) {
-        return res.status(400).send({ status: false, message: "employee_gender is required and should contain only 1 or 2" });
-      }
-      
-      store["employee_gender"] = data.employee_gender;
-      
+      if (!validInputValue(data.employee_gender) || !validDigit(data.employee_gender) || !['1', '2'].includes(data.employee_gender)){
+        return  res.status(400).send({ code:"400",status: false, message: "employee_gender is required and should contain only 1 or 2" });};
+      store["employee_gender"] = data.employee_gender;  
     }
-    
+
     if (data.employee_dob) {
-      if (!isValidInputValue(data.employee_dob.trim()) || !/^\d{4}-\d{2}-\d{2}$/.test(data.employee_dob.trim())) {
-        return res.status(400).send({ status: false, message: "employee_dob is required and should contain a valid date (YYYY-MM-DD)" });
-      }
-      
+      if (!validInputValue(data.employee_dob) || !validDate(data.employee_dob));
       store["employee_dob"] = data.employee_dob;
     }
-    
-    
+
     if (data.employee_email) {
-      
-      if (!isValidInputValue(data.employee_email.trim()) ||!isValidEmail(data.employee_email.trim())) 
-    {return res.status(400).send({status: false,message: "employee_email is required and should contain only valid email",});}
-    
-    store["employee_email"]=data.employee_email;
-        
+      if (!validInputValue(data.employee_email) ||!validEmail(data.employee_email));   
+      store["employee_email"]=data.employee_email;
       }
-  
-//     //-----------------------------------------------------------------------
-if (data.employee_email) {
-      
-    if (!isValidInputValue(data.employee_email.trim()) ||!isValidEmail(data.employee_email.trim())) 
-    {return res.status(400).send({status: false,message: "employee_email is required and should contain only valid email",});}
 
-store["employee_email"]=data.employee_email;
-    
-  }
-
-  
-  if (data.employee_mobile) {
-      
-    if (!isValidInputValue(data.employee_mobile.trim()) ||!/^[6-9]\d{9}$/.test(data.employee_mobile)) 
-    {return res.status(400).send({status: false,message: "employee_mobile is required and should contain only valid mobile number",});}
-
-store["employee_mobile"]=data.employee_mobile;
-    
-  }
-  if (data.employee_company) {
-      
-    if (!isValidInputValue(data.employee_company.trim()) ||!isValidOnlyCharacters(data.employee_company.trim())) 
-    {return res.status(400).send({status: false,message: "employee_company is required and should contain only name",});}
-
-store["employee_company"]=data.employee_company;
-    
-  }
-
-  if (data.employee_designation) {
-      
-    if (!isValidInputValue(data.employee_designation.trim()) ||!/^\d+$/.test(data.employee_designation.trim())) 
-    {return res.status(400).send({status: false,message: "employee_designation is required and should contain only valid employee_designation",});}
-
-store["employee_designation"]=data.employee_designation;
-    
-  }
-  
-
-  if (data.employee_branch_type) {
-    if (!isValidInputValue(data.employee_branch_type.trim()) || !/^\d+$/.test(data.employee_branch_type.trim()) || ![1, 2, 3].includes(parseInt(data.employee_branch_type))) {
-      return res.status(400).send({ status: false, message: "employee_branch_type is required and should contain only valid values of 1, 2, or 3" });
-    }
-  
-    store["employee_branch_type"] = data.employee_branch_type;
-  }
-  
-  if (data.employee_probation_start) {
-      
-    if (!isValidInputValue(data.employee_probation_start.trim()) ||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(data.employee_probation_start.trim())) 
-    {return res.status(400).send({status: false,message: "employee_probation_start is required and should contain only valid format YYYY-MM-DD HH:MM:SS"});}
-
-store["employee_probation_start"]=data.employee_probation_start;
-    
-  }
-  if (data.employee_probation_end) {
-      
-    if (!isValidInputValue(data.employee_probation_end.trim()) ||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(data.employee_probation_end.trim())) 
-    {return res.status(400).send({status: false,message: "employee_probation_end is required and should contain only valid format YYYY-MM-DD HH:MM:SS"});}
-
-store["employee_probation_end"]=data.employee_probation_end;
-    
-  }
-  if (data.employee_home_address) {
-      
-    if (!isValidInputValue(data.employee_home_address.trim()) ||!isValidOnlyCharacters(data.employee_home_address.trim())) 
-    {return res.status(400).send({status: false,message: "employee_home_address is required and should contain only valid characters "});}
-
-store["employee_home_address"]=data.employee_home_address;
-    
-  }
-
-  if (data.employee_office_address) {
-      
-    if (!isValidInputValue(data.employee_office_address.trim()) ||!isValidOnlyCharacters(data.employee_office_address.trim())) 
-    {return res.status(400).send({status: false,message: "employee_office_address is required and should contain only valid  characters "});}
-
-
-store["employee_office_address"]=data.employee_office_address;
-    
-  }
-
-  if (data.employee_present_address) {
-      
-    if (!isValidInputValue(data.employee_present_address.trim()) ||!isValidOnlyCharacters(data.employee_present_address.trim())) 
-    {return res.status(400).send({status: false,message: "employee_present_address is required and should contain only valid  characters "});}
-
-
-store["employee_present_address"]=data.employee_present_address;
-    
-  }
-    ////
-
-    if (data.employee_type) {
-      if (!isValidInputValue(data.employee_type.trim()) || !/^\d+$/.test(data.employee_type.trim()) || ![1, 2, 3, 4, 5].includes(parseInt(data.employee_type))) {
-        return res.status(400).send({ status: false, message: "employee_type is required and should contain only valid values of 1, 2, 3, 4, or 5" });
+      // valid employee_photo
+    if (employeePhoto) {
+      const k = await db("ptr_employees").select("employee_no").where("employee_id", req.params.employee_id);
+      if (k.length === 0) {
+        return res.status(400).send({ status: false, message: "data not found" });
       }
-    
-      store["employee_type"] = data.employee_type;
+      const uploadedUrl = await uploadFile2(employeePhoto, k[0].employee_no);
+      store["employee_photo"] = k[0].employee_no;
     }
 
-    if (data.employee_blood_group) {
-      
-    if (!isValidInputValue(data.employee_blood_group.trim()) ||!isValidOnlyCharacters(data.employee_blood_group.trim())) 
-    {return res.status(400).send({status: false,message: "employee_blood_group is required and should contain only valid employee_blood_group"});}
+      if (data.employee_mobile) {
+      if (!validInputValue(data.employee_mobile) ||!validPhone(data.employee_mobile));    
+      store["employee_mobile"]=data.employee_mobile;
+      }  
 
-    store["employee_blood_group"] = data.employee_blood_group;
-      }
-    
-      if (data.employee_marital_status) {
-        if (!isValidInputValue(data.employee_marital_status.trim()) || !/^\d+$/.test(data.employee_marital_status.trim()) || ![0, 1, 2].includes(parseInt(data.employee_marital_status))) {
-          return res.status(400).send({ status: false, message: "employee_marital_status is required and should contain only valid values of 0, 1, or 2" });
-        }
-      
-        store["employee_marital_status"] = data.employee_marital_status;
+      if (data.employee_company) {
+        if(!validInputValue(data.employee_company) || !validOnlyCharacters(data.employee_company));
+        store["employee_company"] = data.employee_company;
       }
 
+      if (data.employee_designation) {
+        if(!validInputValue(data.employee_designation) || !validDigit(data.employee_designation));
+        store["employee_designation"] = data.employee_designation;
+      }
 
-    if (data.employee_religion) {
-    
-    if (!isValidInputValue(data.employee_religion.trim()) ||!isValidOnlyCharacters(data.employee_religion.trim())) 
-    {return res.status(400).send({status: false,message: "employee_religion is required and should contain only valid characters"});}
-      
-        store["employee_religion"] = data.employee_religion;
+      if (data.employee_branch_type) {
+        if (!validInputValue(data.employee_branch_type) || !validDigit(data.employee_branch_type) || ![1, 2, 3].includes(parseInt(data.employee_branch_type))) {
+          return res.status(400).send({ status: false, message: "employee_branch_type contain only valid values of 1, 2, or 3" })}
+        store["employee_branch_type"] = data.employee_branch_type;
       }
       
-      if (data.employee_grade) {
-    
-        if (!isValidInputValue(data.employee_grade.trim()) ||!isValidOnlyCharacters(data.employee_grade.trim())) 
-        {return res.status(400).send({status: false,message: "employee_grade is required and should contain only valid characters"});}
-    
-            store["employee_grade"] = data.employee_grade;
+      if (data.employee_probation_start) {
+        if (!validInputValue(data.employee_probation_start) ||!validDateTime(data.employee_probation_start));    
+       store["employee_probation_start"]=data.employee_probation_start;
+      }
+
+      if (data.employee_probation_end) {
+        if (!validInputValue(data.employee_probation_end) ||!validDateTime(data.employee_probation_end));    
+       store["employee_probation_end"]=data.employee_probation_end;
+      }
+
+      if (data.employee_home_address) {
+        if (!validInputValue(data.employee_home_address) ||!validOnlyCharacters(data.employee_home_address));    
+        store["employee_home_address"]=data.employee_home_address;
+      }
+
+      if (data.employee_office_address) {
+        if (!validInputValue(data.employee_office_address) ||!validOnlyCharacters(data.employee_office_address));     
+        store["employee_office_address"]=data.employee_office_address;
+      }
+
+      if (data.employee_present_address) {
+        if (!validInputValue(data.employee_present_address) ||!validOnlyCharacters(data.employee_present_address));     
+        store["employee_present_address"]=data.employee_present_address;
+      }
+
+      if (data.employee_type) {
+        if (!validInputValue(data.employee_type) || !validDigit(data.employee_type) || ![1, 2, 3, 4, 5].includes(parseInt(data.employee_type))) {
+          return res.status(400).send({ status: false, message: "employee_type is required and should contain only valid values of 1, 2, 3, 4, or 5" })};
+        store["employee_type"] = data.employee_type;
+      }
+
+      if (data.employee_blood_group) {
+        if (!validInputValue(data.employee_blood_group) ||!validOnlyCharacters(data.employee_blood_group));    
+        store["employee_blood_group"] = data.employee_blood_group;
           }
-      
-          if (data.employee_bank_ac_number) {
-            if (!isValidInputValue(data.employee_bank_ac_number.trim()) || !isValidOnlyCharacters(data.employee_bank_ac_number.trim())) {
-              return res.status(400).send({ status: false, message: "employee_bank_ac_number is required and should contain only valid characters" });
-            }
-          
-            store["employee_bank_ac_number"] = data.employee_bank_ac_number;
+
+          if (data.employee_marital_status) {
+            if (!validInputValue(data.employee_marital_status) || !validDigit(data.employee_marital_status) || ![0, 1, 2].includes(parseInt(data.employee_marital_status))) {
+              return res.status(400).send({ status: false, message: "employee_marital_status is required and should contain only valid values of 0, 1, or 2" });};
+            store["employee_marital_status"] = data.employee_marital_status;
           }
-          
-          if (data.employee_ifsc) {
-            if (!isValidInputValue(data.employee_ifsc.trim()) ||!/^[A-Za-z]{4}[0][A-Za-z0-9]{6}$/.match(data.employee_ifsc.trim())) 
-            {return res.status(400).send({status: false,message: "employee_ifsc is required and should contain only valid ifsc"});}
-          
-            store["employee_ifsc"] = data.employee_ifsc;
-          }
-          
-          if (data.employee_name_in_bank_ac) {
-            if (!isValidInputValue(data.employee_name_in_bank_ac.trim()) ||!isValidOnlyCharacters(data.employee_name_in_bank_ac.trim())) 
-            {return res.status(400).send({status: false,message: "employee_name_in_bank_ac is required and should contain only valid characters"});}
-          
-            store["employee_name_in_bank_ac"] = data.employee_name_in_bank_ac;
-          }
-          
-          if (data.employee_verification_status) {
-            if (!isValidInputValue(data.employee_verification_status.trim()) || !/^\d+$/.test(data.employee_verification_status.trim()) || !data.employee_verification_status.includes("0") || !data.employee_verification_status.includes("1") || !data.employee_verification_status.includes("2") || !data.employee_verification_status.includes("3")) {
-              return res.status(400).send({ status: false, message: "employee_verification_status is required and should contain only valid numbers (0, 1, 2, or 3)" });
-            }
+
+          if (data.employee_religion) {
+            if (!validInputValue(data.employee_religion) ||!validOnlyCharacters(data.employee_religion));              
+                store["employee_religion"] = data.employee_religion;
+              }
+
+              if (data.employee_grade) {
+                if (!validInputValue(data.employee_grade) ||!validOnlyCharacters(data.employee_grade));            
+                    store["employee_grade"] = data.employee_grade;
+                  }
+              
+                  if (data.employee_bank_ac_number) {
+                    if (!validInputValue(data.employee_bank_ac_number) || !validOnlyCharacters(data.employee_bank_ac_number));                  
+                    store["employee_bank_ac_number"] = data.employee_bank_ac_number;
+                  }
+
+                  if (data.employee_ifsc) {
+                    if (!validInputValue(data.employee_ifsc) ||!validIFSC(data.employee_ifsc));                  
+                    store["employee_ifsc"] = data.employee_ifsc;
+                  }
+                  
+                  if (data.employee_name_in_bank_ac) {
+                    if (!validInputValue(data.employee_name_in_bank_ac) ||!validOnlyCharacters(data.employee_name_in_bank_ac));                  
+                    store["employee_name_in_bank_ac"] = data.employee_name_in_bank_ac;
+                  }
+
+                  if (data.employee_verification_status) {
+                    if (!validInputValue(data.employee_verification_status) || !validDigit(data.employee_verification_status) || ![0,1,2,3].includes(parseInt(data.employee_verification_status))){
+                      return res.status(400).send({ status: false, message: "employee_verification_status is required and should contain only valid numbers (0, 1, 2, or 3)" });};
+                    store["employee_verification_status"] = data.employee_verification_status;
+                  }
+                  
             
-            store["employee_verification_status"] = data.employee_verification_status;
-          }
-          
-    
-          if (data.employee_verification_completed_on) {
-    
-            if (!isValidInputValue(data.employee_verification_completed_on.trim()) ||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(data.employee_verification_completed_on.trim())) 
-            {return res.status(400).send({status: false,message: "employee_verification_completed_on is required and should contain only date and time"});}
-          
-            store["employee_verification_completed_on"] = data.employee_verification_completed_on;
-          }
+                  if (data.employee_verification_completed_on) {
+                    if (!validInputValue(data.employee_verification_completed_on) ||!validDateTime(data.employee_verification_completed_on));                  
+                    store["employee_verification_completed_on"] = data.employee_verification_completed_on;
+                  }
 
-    
-    ////
-    
-    if (data.employee_verification_agency) {
-     
-     if (!isValidInputValue(data.employee_verification_agency.trim()) ||!isValidOnlyCharacters(data.employee_verification_agency.trim())) 
-    {return res.status(400).send({status: false,message: "employee_verification_agency is required and should contain only valid characters"});}
-    
-      store["employee_verification_agency"] = data.employee_verification_agency;
+                  if (data.employee_verification_agency) {
+                    if (!validInputValue(data.employee_verification_agency) ||!validOnlyCharacters(data.employee_verification_agency));                   
+                     store["employee_verification_agency"] = data.employee_verification_agency;
+                   }
+               
+                   if (data.employee_no) {
+                     if (!validInputValue(data.employee_no) || !validCharNum(data.employee_no));
+                     store["employee_no"] = data.employee_no;
+                   }
+
+                   if (data.org_id) {
+                    if (!validInputValue(data.org_id) ||!validDigit(data.org_id));
+                    store["org_id"] = data.org_id;
+                    }
+        
+
+    console.log("new ",store)
+
+   // Check if the employee exists and update
+    const results = await db.select("*").from("ptr_employees").where("employee_id", req.params.employee_id);
+    if (results.length !== 1) {
+      return res.status(404).json({ code: "404", status: "error", message: "Invalid emp" });
+    } else {
+      await db("ptr_employees").where("employee_id", req.params.employee_id).update(store);
+      return res.status(200).json({ code: "200", status: "success", message: "Successfully emp Update", data: store });
     }
-
-    if (data.employee_no) {
-      if (!isValidInputValue(data.employee_no.trim()) || !/^[a-zA-Z0-9]+$/.test(data.employee_no.trim())) {
-        return res.status(400).send({ status: false, message: "employee_no is required and should contain only valid characters (alphabets and numbers)" });
-      }
-      
-      store["employee_no"] = data.employee_no;
-    }
-
-    if (data.org_id) {
-
-      if (!isValidInputValue(data.org_id.trim()) ||!/^\d+$/.match(data.org_id.trim())) 
-      {
-        return res.status(400).send({status: false,message: "org_id is required and should contain only valid number"});
-    }
-      store["org_id"] = data.org_id;
-      }
-      
-  
-  
-// ////// 
-
-console.log("testing")
-console.log("store",store)
- 
-        let results = await db
-          .select("*")
-          .from("ptr_employees")
-          .where("employee_id", req.params.employee_id);
-
-
-        if (results.length !== 1) {
-          return res.status(404).json(("404", "error", "Invalid emp"));
-        } else {
-          await db("ptr_employees").where("employee_id", req.params.employee_id).update(store);
-          return res.status(200).json({code:"200",status: "success", msg:"Successfully emp Update", data:store});
-        }
-     
-  } catch (e) {
-    return res.status(500).json(("500", "error", "Something went wrong" + e, {}));
+  } catch (error) {
+    return res.status(500).json({ code: "500", status: "error", message: "Something went wrong: " + error, data: {} });
   }
 });
+
+
 
 
 
@@ -1509,7 +1365,7 @@ app.post('/getEmployee', async (req, res) => {
 
     if (
       !employee_id ||
-      !isValidInputValue(employee_id) 
+      !validInputValue(employee_id) 
     ) {
       return res.status(400).send({
         status: false,
@@ -1529,7 +1385,7 @@ app.post('/getEmployee', async (req, res) => {
           employee_id: w[0].employee_id,
           employee_no: w[0].employee_no,
           employee_ip_address: w[0].employee_ip_address,
-          employee_name: w[0].employee_name,
+          employee_company: w[0].employee_company,
           
           employee_fathers_name: w[0].employee_fathers_name,
           employee_dob: w[0].employee_dob,
@@ -1568,7 +1424,7 @@ app.post('/getEmployee', async (req, res) => {
           employee_bank_ac_number:w[0].employee_bank_ac_number,
           employee_ifsc:w[0].employee_ifsc,
 
-          employee_name_in_bank_ac:w[0].employee_name_in_bank_ac,
+          employee_company_in_bank_ac:w[0].employee_company_in_bank_ac,
           employee_verification_status:w[0].employee_verification_status,
           employee_verification_completed_on:w[0].employee_verification_completed_on,
           employee_verification_agency:w[0].employee_verification_agency,
@@ -1597,7 +1453,7 @@ app.post('/getEmployee', async (req, res) => {
           employee_id: w[0].employee_id,
           employee_no: w[0].employee_no,
           employee_ip_address: w[0].employee_ip_address,
-          employee_name: w[0].employee_name,
+          employee_company: w[0].employee_company,
           
           employee_fathers_name: w[0].employee_fathers_name,
           employee_dob: w[0].employee_dob,
@@ -1639,7 +1495,7 @@ app.post('/getEmployee', async (req, res) => {
           employee_bank_ac_number:w[0].employee_bank_ac_number,
           employee_ifsc:w[0].employee_ifsc,
 
-          employee_name_in_bank_ac:w[0].employee_name_in_bank_ac,
+          employee_company_in_bank_ac:w[0].employee_company_in_bank_ac,
           employee_verification_status:w[0].employee_verification_status,
           employee_verification_completed_on:w[0].employee_verification_completed_on,
           employee_verification_agency:w[0].employee_verification_agency,
@@ -1701,43 +1557,59 @@ app.get('/getallEmployees', async (req, res) => {
   }
 });
 
-//------------------------------------------------- getBdayWish -----------------------------------------------
+//------------------------------------------------------------- getBdayWish -----------------------------------------------
 
 const moment = require('moment');
 
 app.get('/getBdayWish', async (req, res) => {
-  try { 
+  try {
     const today = moment().format('YY-MM-DD');
     const employees = await db('ptr_employees')
-      .select('employee_name').where('employee_dob',today)
+      .select('employee_company')
+      .where('employee_dob', today);
 
-      // console.log("detaol",employees)
-    
-    if (employees.length === 0) {
-      return res.status(400).send({ code: "400", status: "failed", response: "no Data found in the database" });
-    } else {
+    const employeeData = employees.map(emp => ({
+      employee_company: `Happy Birthday ${emp.employee_company}`
+    }));
 
-      //maping with emp_name happy birthday
-      const employeeData = employees.map(async (emp) => {
-     
-       emp.employee_name=`Happy Birthday ${emp.employee_name}`
-       
-        return emp;
-      });
- 
-      const resolvedEmployees = await Promise.all(employeeData);
-
-
-      return res.status(200).send({ code: "200", status: "success",employees: resolvedEmployees });
+    if (employeeData.length === 0) {
+      return res.status(400).send({ code: "400", status: "failed", response: "No employee has a birthday today." });
     }
+
+    return res.status(200).send({ code: "200", status: "success", employees: employeeData });
   } catch (error) {
-    res.status(500).send({ error: error.message });
+    return res.status(500).send({ error: error.message });
+  }
+});
+
+//---------------------------------------------------------- getAnniversaryWish ----------------------------------
+
+
+app.get('/getAnniversaryWish', async (req, res) => {
+  try {
+    const today = moment().subtract(1, 'year').format('YY-MM-DD');
+    const employees = await db('ptr_employees')
+      .select('employee_name')
+      .whereRaw("DATE(employee_created_date) = DATE(?)", [today]);
+
+    const employeeData = employees.map(emp => ({
+      employee_company: `Happy Anniversary ${emp.employee_name}`
+    }));
+
+    if (employeeData.length === 0) {
+      return res.status(400).send({ code: "400", status: "failed", response: "No employee has an anniversary today." });
+    }
+
+    return res.status(200).send({ code: "200", status: "success", employees: employeeData });
+  } catch (error) {
+    return res.status(500).send({ error: error.message });
   }
 });
 
 
 
-//____________________________/ send mail to multiple persons /___________________
+//____________________________/ send mail to multiple persons /____________________________________________________
+
 
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
@@ -1748,7 +1620,7 @@ app.post('/sendBulkMail/:employee_id' , async(req, res) => {
 
     if(!employee_id){return res.send({code:400,status:'failed',response:'employee_id is required!'})}
 
-       rightEMP=await db.select('employee_name','employee_email','employee_type').where('employee_id',employee_id).from("ptr_employees");
+       rightEMP=await db.select('employee_company','employee_email','employee_type').where('employee_id',employee_id).from("ptr_employees");
 
        if(rightEMP.length ==0){return res.send({code:400,status:'failed',response:`no employee found by this employee_id : ${employee_id}`})}
 
@@ -1764,7 +1636,7 @@ app.post('/sendBulkMail/:employee_id' , async(req, res) => {
         let fromBody=req.body.intro;
         ///console.log("fromBody",fromBody)
 
-      let emailData = await db.select("employee_email","employee_name").from("ptr_employees")
+      let emailData = await db.select("employee_email","employee_company").from("ptr_employees")
       //console.log(emailData);
       let recipients = emailData.map((data) => data.employee_email); // Extract the email addresses
       console.log("recipients", recipients)  
@@ -1805,7 +1677,7 @@ app.post('/letterAPI/:employee_id', async (req, res) => {
     const data = req.body;
 
     const {
-      employee_name,
+      employee_company,
       employee_fathers_name,
       employee_designation,
       employee_branch_type,
@@ -1826,7 +1698,7 @@ app.post('/letterAPI/:employee_id', async (req, res) => {
     }
 
     const rightEMP = await db
-      .select('employee_name', 'employee_email', 'employee_type')
+      .select('employee_company', 'employee_email', 'employee_type')
       .where('employee_id', employee_id)
       .from('ptr_employees');
 
@@ -1870,7 +1742,7 @@ app.post('/letterAPI/:employee_id', async (req, res) => {
 
     const replacements = {
       '[COMPANY_LOGO]': url[2],
-      '[EMPLOYEE_NAME]': employee_name,
+      '[employee_company]': employee_company,
       '[employee_fathers_name]': employee_fathers_name,
       '[employee_designation]': employee_designation,
       '[employee_branch_type]': employee_branch_type,
@@ -1878,7 +1750,7 @@ app.post('/letterAPI/:employee_id', async (req, res) => {
       '[START_DATE]': employee_joining_date,
       '[SALARY]': employee_salary,
       '[empType]': 'HR',
-      '[rightName]': rightEMP[0].employee_name,
+      '[rightName]': rightEMP[0].employee_company,
       '[employee_joining_date]': employee_joining_date,
       '[employee_leaving_date]': employee_leaving_date,
       '[CONTACT_INFORMATION]': '1236788888'
