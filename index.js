@@ -9,11 +9,25 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended:true }))
 app.use(upload());
 
+
+//Function to serve all static files inside controllers directory.
+app.use(express.static('data')); 
+
 // ----------------------------------- validations here -------------------------------
 
 const {validInputValue,validOnlyCharacters,validEmail,validPhone,validNumber,validPincode,validPrice,validObjectId,validImageType,
   ValidPassword,validDigit,validDate,validDateTime,validIFSC,validCharNum} = require('../validations');
   
+//------------------ mysql connections knex --------------------
+const db = knex({
+  client: "mysql",
+  connection: {
+    host: "localhost",
+    user: "root",
+    password: "", //password
+    database: "attendance_dev",
+  },
+});
 
 //aws_____________________________________________________________________
 
@@ -58,7 +72,7 @@ var uploadFile = async (file, company_email) => {
   });
 }
 
-//____________________________________________________get methode aws _______________________________--
+// //____________________________________________________get methode aws _______________________________--
 const download = async (company_email) => {
   return new Promise((resolve, reject) => {
     const listParams = {
@@ -212,7 +226,7 @@ app.post("/postData",async (req, res) => {
 //_____________aws upload file,mail
 
                 const uploadedProfilePictureUrl = await uploadFile(company_logo, company_email);
-                console.log("uploadedProfilePictureUrl", uploadedProfilePictureUrl)   
+                console.log("uploadedProfilePictureUrl", uploadedProfilePictureUrl); 
 
       db("ptr_company")
       .insert({
@@ -470,16 +484,6 @@ app.post('/getall', async (req, res) => {
 
   // app.listen(3000, () => {console.log("mysql Server started at post 3000")});
 
-//------------------ connection knex --------------------
-const db = knex({
-    client: "mysql",
-    connection: {
-      host: "localhost",
-      user: "root",
-      password: "", //password
-      database: "attendance_dev",
-    },
-  });
 
 
 //_____________valid if some extra fields are present in the request_________________________________________
@@ -1108,14 +1112,14 @@ const response = (code, status, message, data = "", count = false) => {
 
 //----------------------mongodb connections
 
-const candidateModel = require("./models/candidateModel");
-  const mongoose = require('mongoose')
+// const candidateModel = require("./models/candidateModel");
+//   const mongoose = require('mongoose')
 
-  mongoose.connect("mongodb+srv://RaviKumarSharma:i6tpVmiNCvIQSjH6@cluster0.pnzdn4a.mongodb.net/candidate-logs",{
-    useNewUrlParser: true
-})
-    .then(() => console.log("MongoDb is connected"))
-    .catch(err => console.log(err))
+//   mongoose.connect("mongodb+srv://RaviKumarSharma:i6tpVmiNCvIQSjH6@cluster0.pnzdn4a.mongodb.net/candidate-logs",{
+//     useNewUrlParser: true
+// })
+//     .then(() => console.log("MongoDb is connected"))
+//     .catch(err => console.log(err))
 
 
 
@@ -1185,7 +1189,7 @@ app.put('/editemployee/:employee_id', async (req, res) => {
       store["employee_name"] = data.employee_name;
     }
 
-    if (data.employee_fathers_name) {
+    if(data.employee_fathers_name) {
       if(!validInputValue(data.employee_fathers_name) || !validOnlyCharacters(data.employee_fathers_name));
       store["employee_fathers_name"]=data.employee_fathers_name;
     }
@@ -1351,9 +1355,6 @@ app.put('/editemployee/:employee_id', async (req, res) => {
     return res.status(500).json({ code: "500", status: "error", message: "Something went wrong: " + error, data: {} });
   }
 });
-
-
-
 
 
 //--------------------------------------------------------------- getEmployee with url ---------------------------------------
@@ -1761,5 +1762,344 @@ app.post('/letterAPI/:employee_id', async (req, res) => {
     return res.status(200).send(modifiedHTML);
   } catch (error) {
     return res.status(500).send({ error: error.message });
+  }
+});
+
+
+
+
+
+
+
+
+
+const ExcelJS = require('exceljs');
+//getCandidatesReportWithType
+app.post("/getCandidatesReportWithType", async (req, res) => {
+  try {
+    console.log("getCandidatesReportWithType api");
+    const candidate = await db("ptr_candidates")
+      .select("*")
+      .orderBy("candidate_id", "desc");
+
+    if (candidate.length === 0) {
+      return res
+        .status(400)
+        .send({
+          code: "400",
+          status: "failed",
+          response: "data is not found in db",
+        });
+    } else {
+      let candidateData = candidate.map(async (cand) => {
+        const url = await download(cand.candidate_ref_no);
+
+        if (url.length > 0) {
+          cand.candidate_resume = url;
+        }
+
+        return cand;
+      });
+
+      let resolvedCandidates = await Promise.all(candidateData);
+      if (req.body.type === 1) {
+        console.log("1");
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet();
+
+        const columnHeaders = Object.keys(resolvedCandidates[0]);
+        worksheet.addRow(columnHeaders);
+
+        resolvedCandidates.forEach((resolvedCandidates) => {
+          const rowData = Object.values(resolvedCandidates);
+          worksheet.addRow(rowData);
+        });
+
+        const filename = "data/excel.xlsx";
+        workbook.xlsx
+          .writeFile(filename)
+          .then(() => {
+            const baseUrl = `http://192.168.101.15:${process.env.PORT || 3000}`;
+            const imageUrl = `${baseUrl}/excel.xlsx`;
+
+            return res
+              .status(200)
+              .send({
+                code: "200",
+                status: "success",
+                message: `Data successfully exported`,
+                url: imageUrl,
+              });
+          })
+          .catch((err) => {
+            res.status(500).send({ err: err.message });
+          });
+      } else if (req.body.type === 2) {
+        console.log("2");
+        return res
+          .status(200)
+          .send({
+            code: "200",
+            status: "success",
+            total_candidates: resolvedCandidates.length,
+            candidates: resolvedCandidates,
+          });
+      } else {
+        res
+          .status(400)
+          .send({
+            code: "400",
+            status: "failed",
+            message: "please type 1 or 2 to get data",
+          });
+      }
+    }
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+
+app.post('/candidate_status_update/:candidate_id', async (req, res) => {
+  try {
+    console.log("candidate_status_update api");
+  
+    let store={}
+      store["candidate_status"] = req.body.candidate_status;
+      store["candidate_status_update"] = new Date();
+
+    
+    
+    if (!validInputValue(req.params.candidate_id)) {
+      return res.status(400).send({ status: false, message: "candidate_id is required and should contain only number" });
+    }
+    if (req.body.candidate_status!== 1&&
+      req.body.candidate_status !== 2 &&
+      req.body.candidate_status !== 3 &&
+      req.body.candidate_status !== 4 &&
+      req.body.candidate_status !== 5 &&
+      req.body.candidate_status !== 6 &&
+      req.body.candidate_status !== 7 &&
+      req.body.candidate_status !== 8){return res.status(400).send({ code: "400", status: "failed",
+      message: `incorrect candidate_status ${req.body.candidate_status}`});
+
+    }else{
+      const results = await db.select("*").from("ptr_candidates").where("candidate_id", req.params.candidate_id);
+      if (results.length !== 1) {
+        return res.status(404).json({ code: "400", status: "error", message: `invalid id ${req.params.candidate_id}` });
+      } else {
+        await db("ptr_candidates").where("candidate_id", req.params.candidate_id).update(store);
+        return res.status(200).json({ code: "200", status: "success", message: "Successfully Update", data: store });
+      }
+
+    }
+
+  } catch (error) {
+    return res.status(500).json({ code: "500", status: "error", message: "Something went wrong: " + error, data: {} });
+  }
+});
+
+
+app.get('/candidate_response/:candidate_id', async (req, res) => {
+  try {
+    console.log("candidate_response api");
+
+    if (!validInputValue(req.params.candidate_id)) {
+      return res.status(400).send({ status: false, message: "candidate_id is required and should contain only numbers" });
+    }
+
+    const results = await db.select("candidate_is_called").from("ptr_candidates").where("candidate_id", req.params.candidate_id);
+
+    if (results.length !== 1) {
+      return res.status(400).json({ code: "400", status: "error", message: `Invalid id ${req.params.candidate_id}` });
+    }
+
+    console.log("candidate_is_called", results[0].candidate_is_called);
+
+    if (results[0].candidate_is_called === 2 || results[0].candidate_is_called === 3) {
+      const within24 = new Date();                           // for current date and time
+      within24.setHours(within24.getHours() - 24);
+
+      console.log("within24", within24);
+
+      const data = await db
+        .select("candidate_status_update")
+        .from("ptr_candidates")
+        .where("candidate_status_update", ">=", within24);
+
+       console.log("data", data);
+
+      if (data.length !== 1) {
+        console.log("no data within 24");
+
+        const store = {
+          candidate_is_called: 1,
+          candidate_status_update: new Date()
+        };
+
+        await db("ptr_candidates")
+          .where("candidate_id", req.params.candidate_id)
+          .update(store);
+
+        return res.status(200).json({
+          code: "200",
+          status: "success",
+          message: "Successfully updated"
+        });
+      } else {
+        return res.status(400).json({
+          code: "400",
+          status: "failed",
+          message: "No changes required"
+        });
+      }
+    } else {
+      return res.status(400).json({ code: "400", status: "failed", message: "Candidate might not be connected or not interested" });
+    }
+  } catch (error) {
+    return res.status(500).json({ code: "500", status: "error", message: "Something went wrong: " + error, data: {} });
+  }
+});
+
+
+
+//getEmployeeReportWithType
+app.post("/getEmployeeReportWithType", async (req, res) => {
+  try {
+    console.log("getEmployeeReportWithType api");
+    const employee = await db("ptr_employees")
+      .select("*")
+      .orderBy("employee_id", "desc");
+
+    if (employee.length === 0) {
+      return res
+        .status(400)
+        .send({
+          code: "400",
+          status: "failed",
+          response: "data is not found in db",
+        });
+    } else {
+      let employeeData = employee.map(async (emp) => {
+        const url = await download(emp.employee_no);
+
+        if (url.length > 0) {
+          emp.employee_photo = url;
+        }
+
+        return emp;
+      });
+
+      let resolvedEmployees = await Promise.all(employeeData);
+
+      if (req.body.type === 1) {
+        console.log("1");
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet();
+
+        const columnHeaders = Object.keys(resolvedEmployees[0]);
+        worksheet.addRow(columnHeaders);
+
+        resolvedEmployees.forEach((resolvedEmployees) => {
+          const rowData = Object.values(resolvedEmployees);
+          worksheet.addRow(rowData);
+        });
+
+        const filename = "data/employeeExcel.xlsx";
+        workbook.xlsx
+          .writeFile(filename)
+          .then(() => {
+            const baseUrl = `http://192.168.101.15:${process.env.PORT || 3000}`;
+            const imageUrl = `${baseUrl}/employeeExcel.xlsx`;
+
+            return res
+              .status(200)
+              .send({
+                code: "200",
+                status: "success",
+                message: `Data successfully exported`,
+                url: imageUrl,
+              });
+          })
+          .catch((err) => {
+            res.status(500).send({ err: err.message });
+          });
+      } else if (req.body.type === 2) {
+        console.log("2");
+
+        return res
+          .status(200)
+          .send({
+            code: "200",
+            status: "success",
+            total_employees: resolvedEmployees.length,
+            employees: resolvedEmployees,
+          });
+      } else {
+        res
+          .status(400)
+          .send({
+            code: "400",
+            status: "failed",
+            message: "please type 1 or 2 to get data",
+          });
+      }
+    }
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+
+
+//getAttendanceDataWithType
+app.post('/getAttendanceDataWithType', async (req, res) => {
+  try {
+    console.log("getAttendanceDataWithType api")
+    const attendance = await db('ptr_attendance').select('*').orderBy('attendance_id','desc');
+
+    if (attendance.length === 0) {
+      return res.status(400).send({ code: "400", status: "failed", response: "data is not found in db" });
+    } else {
+      if (req.body.type === 1) {
+      console.log("1")
+
+     const workbook = new ExcelJS.Workbook();
+     const worksheet = workbook.addWorksheet();
+
+     const columnHeaders = Object.keys(attendance[0]);
+     worksheet.addRow(columnHeaders);
+ 
+     attendance.forEach((attendance) => {
+       const rowData = Object.values(attendance);
+       worksheet.addRow(rowData);
+     });
+ 
+     const filename = 'data/attendanceExcel.xlsx';
+     workbook.xlsx.writeFile(filename)
+       .then(() => {
+
+        const baseUrl = `http://192.168.101.15:${process.env.PORT || 3000}`;
+        const imageUrl = `${baseUrl}/attendanceExcel.xlsx`;
+     
+         return res.status(200).send({ code: "200", status: "success",message:`Data successfully exported`,url:imageUrl});
+
+       })
+       .catch((err) => {
+         res.status(500).send({ err: err.message });
+
+       })
+        
+      } else if(req.body.type === 2){
+        console.log("2")
+        return res.status(200).send({ code: "200", status: "success", total_attendances: attendance.length, attendances: attendance });
+      }else{
+        res.status(400).send({ code: "400", status: "failed",message:"please type 1 or 2 to get data"  });
+      }
+    }
+  } catch (error) {
+    res.status(500).send({ error: error.message });
   }
 });
