@@ -8,6 +8,8 @@ const app = express();
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended:true }))
 app.use(upload());
+const path = require("path");
+const xlsx = require("xlsx");
 
 
 //Function to serve all static files inside controllers directory.
@@ -1773,92 +1775,7 @@ app.post('/letterAPI/:employee_id', async (req, res) => {
 
 
 
-const ExcelJS = require('exceljs');
-//getCandidatesReportWithType
-app.post("/getCandidatesReportWithType", async (req, res) => {
-  try {
-    console.log("getCandidatesReportWithType api");
-    const candidate = await db("ptr_candidates")
-      .select("*")
-      .orderBy("candidate_id", "desc");
 
-    if (candidate.length === 0) {
-      return res
-        .status(400)
-        .send({
-          code: "400",
-          status: "failed",
-          response: "data is not found in db",
-        });
-    } else {
-      let candidateData = candidate.map(async (cand) => {
-        const url = await download(cand.candidate_ref_no);
-
-        if (url.length > 0) {
-          cand.candidate_resume = url;
-        }
-
-        return cand;
-      });
-
-      let resolvedCandidates = await Promise.all(candidateData);
-      if (req.body.type === 1) {
-        console.log("1");
-
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet();
-
-        const columnHeaders = Object.keys(resolvedCandidates[0]);
-        worksheet.addRow(columnHeaders);
-
-        resolvedCandidates.forEach((resolvedCandidates) => {
-          const rowData = Object.values(resolvedCandidates);
-          worksheet.addRow(rowData);
-        });
-
-        const filename = "data/excel.xlsx";
-        workbook.xlsx
-          .writeFile(filename)
-          .then(() => {
-            const baseUrl = `http://192.168.101.15:${process.env.PORT || 3000}`;
-            const imageUrl = `${baseUrl}/excel.xlsx`;
-
-            return res
-              .status(200)
-              .send({
-                code: "200",
-                status: "success",
-                message: `Data successfully exported`,
-                url: imageUrl,
-              });
-          })
-          .catch((err) => {
-            res.status(500).send({ err: err.message });
-          });
-      } else if (req.body.type === 2) {
-        console.log("2");
-        return res
-          .status(200)
-          .send({
-            code: "200",
-            status: "success",
-            total_candidates: resolvedCandidates.length,
-            candidates: resolvedCandidates,
-          });
-      } else {
-        res
-          .status(400)
-          .send({
-            code: "400",
-            status: "failed",
-            message: "please type 1 or 2 to get data",
-          });
-      }
-    }
-  } catch (error) {
-    res.status(500).send({ error: error.message });
-  }
-});
 
 
 app.post('/candidate_status_update/:candidate_id', async (req, res) => {
@@ -1964,15 +1881,30 @@ app.get('/candidate_response/:candidate_id', async (req, res) => {
 
 
 
-//getEmployeeReportWithType
-app.post("/getEmployeeReportWithType", async (req, res) => {
+const ExcelJS = require('exceljs');
+//getCandidatesReportWithType
+app.post("/getCandidatesReportWithType", async (req, res) => {
   try {
-    console.log("getEmployeeReportWithType api");
-    const employee = await db("ptr_employees")
-      .select("*")
-      .orderBy("employee_id", "desc");
+    console.log("getCandidatesReportWithType api");
+    const candidate = await db("ptr_candidates")
+      .select("candidate_id","org_id","candidate_name","candidate_mobile","candidate_email","candidate_ref_no","candidate_gender","candidate_dob","candidate_address","candidate_qualification","candidate_experience")
+      .orderBy("candidate_id", "desc");
 
-    if (employee.length === 0) {
+
+      
+  const mappedData = candidate.map((record) => {
+    const attendanceType = record.candidate_gender;
+    switch (attendanceType) {
+      case 1:
+        return { ...record, candidate_gender: 'male' };
+      case 2:
+        return { ...record, candidate_gender: 'female' };
+      default:
+        return record;
+    }
+  });
+
+    if (mappedData.length === 0) {
       return res
         .status(400)
         .send({
@@ -1981,7 +1913,122 @@ app.post("/getEmployeeReportWithType", async (req, res) => {
           response: "data is not found in db",
         });
     } else {
-      let employeeData = employee.map(async (emp) => {
+      let candidateData = mappedData.map(async (cand) => {
+        const url = await download(cand.candidate_ref_no);
+
+        if (url.length > 0) {
+          cand.candidate_resume = url;
+        }
+
+        return cand;
+      });
+
+      let resolvedCandidates = await Promise.all(candidateData);
+      if (req.body.type === 1) {
+        console.log("1");
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet();
+
+        const columnHeaders = Object.keys(resolvedCandidates[0]);
+        worksheet.addRow(columnHeaders);
+
+        resolvedCandidates.forEach((resolvedCandidates) => {
+          const rowData = Object.values(resolvedCandidates);
+          worksheet.addRow(rowData);
+        });
+
+        const filename = "data/excel.xlsx";
+        workbook.xlsx
+          .writeFile(filename)
+          .then(() => {
+            const baseUrl = `http://192.168.101.15:${process.env.PORT || 3000}`;
+            const imageUrl = `${baseUrl}/excel.xlsx`;
+
+            return res
+              .status(200)
+              .send({
+                code: "200",
+                status: "success",
+                message: `Data successfully exported`,
+                url: imageUrl,
+              });
+          })
+          .catch((err) => {
+            res.status(500).send({ err: err.message });
+          });
+      } else if (req.body.type === 2) {
+        console.log("2");
+        return res
+          .status(200)
+          .send({
+            code: "200",
+            status: "success",
+            total_candidates: resolvedCandidates.length,
+            candidates: resolvedCandidates,
+          });
+      } else {
+        res
+          .status(400)
+          .send({
+            code: "400",
+            status: "failed",
+            message: "please type 1 or 2 to get data",
+          });
+      }
+    }
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+//getEmployeeReportWithType
+app.post("/getEmployeeReportWithType", async (req, res) => {
+  try {
+    console.log("getEmployeeReportWithType api");
+    const employee = await db("ptr_employees")
+      .select("employee_id","employee_no","employee_name","employee_fathers_name","employee_dob","employee_email","employee_service_email","employee_mobile","employee_gender",
+      "employee_designation","employee_pancard","employee_home_address","employee_office_address","employee_present_address","employee_photo","employee_marital_status")
+      .orderBy("employee_id", "desc");
+
+
+           
+  const mappedData = employee.map((record) => {
+    const attendanceType = record.employee_gender;
+    switch (attendanceType) {
+      case 1:
+        return { ...record, employee_gender: 'Male' };
+      case 2:
+        return { ...record, employee_gender: 'Female' };
+      default:
+        return record;
+    }
+  });
+
+  const mappedData1 = mappedData.map((record) => {
+    const attendanceType = record.employee_marital_status;
+    switch (attendanceType) {
+      case 0:
+        return { ...record, employee_marital_status: 'single' };
+      case 1:
+        return { ...record, employee_marital_status: 'married' };
+      case 2:
+        return { ...record, employee_marital_status: 'widowed' };
+      default:
+        return record;
+    }
+  });
+
+    if (mappedData1.length === 0) {
+      return res
+        .status(400)
+        .send({
+          code: "400",
+          status: "failed",
+          response: "data is not found in db",
+        });
+    } else {
+      let employeeData = mappedData1.map(async (emp) => {
         const url = await download(emp.employee_no);
 
         if (url.length > 0) {
@@ -2057,49 +2104,487 @@ app.post("/getEmployeeReportWithType", async (req, res) => {
 //getAttendanceDataWithType
 app.post('/getAttendanceDataWithType', async (req, res) => {
   try {
-    console.log("getAttendanceDataWithType api")
-    const attendance = await db('ptr_attendance').select('*').orderBy('attendance_id','desc');
+    console.log("getAttendanceDataWithType api");
 
-    if (attendance.length === 0) {
-      return res.status(400).send({ code: "400", status: "failed", response: "data is not found in db" });
+    const combinedData = await db('ptr_attendance')
+    .select(
+      'ptr_attendance.employee_id',
+      'ptr_attendance.attendance_type',
+      'ptr_attendance.attendance_start',
+      'ptr_attendance.attendance_end',
+      'ptr_attendance.attendance_is_login',
+      'ptr_employees.employee_no',
+      'ptr_employees.employee_name',
+      'ptr_employees.employee_email',
+      'ptr_employees.employee_mobile',
+      'ptr_employees.employee_gender',
+      'ptr_employees.employee_designation',
+      'ptr_employees.employee_company',
+      'ptr_employees.employee_marital_status',
+      'ptr_employees.employee_religion',
+      'ptr_employees.employee_dob',
+      //'ptr_employees.employee_fathers_name'
+    )
+    .join('ptr_employees', 'ptr_attendance.employee_id', 'ptr_employees.employee_id')
+    .orderBy('ptr_attendance.attendance_id', 'desc');
+  
+  const mappedData = combinedData.map((record) => {
+    const attendanceType = record.attendance_type;
+    switch (attendanceType) {
+      case 1:
+        return { ...record, attendance_type: 'Normal' };
+      case 2:
+        return { ...record, attendance_type: 'Lunch' };
+      case 3:
+        return { ...record, attendance_type: 'Break' };
+      default:
+        return record;
+    }
+  });
+  
+  const mappedData1 = mappedData.map((record) => {
+    const attendanceType = record.employee_gender;
+    switch (attendanceType) {
+      case 1:
+        return { ...record, employee_gender: 'Male' };
+      case 2:
+        return { ...record, employee_gender: 'Female' };
+      default:
+        return record;
+    }
+  });
+  //console.log("mappedData1",mappedData1)
+   
+    if (mappedData1.length === 0) {
+      return res.status(400).send({ code: "400", status: "failed", response: "db data is not found" });
     } else {
       if (req.body.type === 1) {
-      console.log("1")
+        console.log("Exporting data to Excel");
 
-     const workbook = new ExcelJS.Workbook();
-     const worksheet = workbook.addWorksheet();
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet();
 
-     const columnHeaders = Object.keys(attendance[0]);
-     worksheet.addRow(columnHeaders);
- 
-     attendance.forEach((attendance) => {
-       const rowData = Object.values(attendance);
-       worksheet.addRow(rowData);
-     });
- 
-     const filename = 'data/attendanceExcel.xlsx';
-     workbook.xlsx.writeFile(filename)
-       .then(() => {
+        const columnHeaders = Object.keys(mappedData1[0]);
+        worksheet.addRow(columnHeaders);
 
-        const baseUrl = `http://192.168.101.15:${process.env.PORT || 3000}`;
-        const imageUrl = `${baseUrl}/attendanceExcel.xlsx`;
-     
-         return res.status(200).send({ code: "200", status: "success",message:`Data successfully exported`,url:imageUrl});
+        mappedData.forEach((mappedDataRecord) => {
+          const rowData = Object.values(mappedDataRecord);
+          worksheet.addRow(rowData);
+        });
 
-       })
-       .catch((err) => {
-         res.status(500).send({ err: err.message });
-
-       })
-        
-      } else if(req.body.type === 2){
-        console.log("2")
-        return res.status(200).send({ code: "200", status: "success", total_attendances: attendance.length, attendances: attendance });
-      }else{
-        res.status(400).send({ code: "400", status: "failed",message:"please type 1 or 2 to get data"  });
+        const filename = 'data/attendanceExcel.xlsx';
+        workbook.xlsx.writeFile(filename)
+          .then(() => {
+            const baseUrl = `http://192.168.101.8:${process.env.PORT || 3000}`;
+            const imageUrl = `${baseUrl}/attendanceExcel.xlsx`;
+            return res.status(200).send({ code: "200", status: "success", message: "data successfully exported", url: imageUrl });
+          })
+          .catch((err) => {
+            res.status(500).send({ error: err.message });
+          });
+      } else if (req.body.type === 2) {
+        console.log("Fetching attendance data with employee details");
+      
+      return res.status(200).send({
+        code: "200",
+        status: "success",
+        total_attendances: mappedData1.length,
+        attendances: mappedData1,
+      });
+      
+      } else {
+        res.status(400).send({ code: "400", status: "failed", message: "please type 1 or 2 to get data" });
       }
     }
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
 });
+
+
+
+// const calculateWorkingDays = (attendanceList, type) => {
+//   const currentDate = new Date();
+//   let workingDays = 0;
+
+//   attendanceList.forEach((attendance) => {
+//     const attendanceStart = new Date(attendance.attendance_start);
+//     let attendanceEnd=new Date(attendance.attendanceEnd);
+
+//     if (attendance.attendance_end) {
+//       attendanceEnd = new Date(attendance.attendance_end);
+//     } else {
+//       attendanceEnd = currentDate;
+//     }
+
+//     const timeDifference = Math.abs(attendanceEnd - attendanceStart); 
+//     const daysDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+
+//     if (attendance.attendance_end !== null) {
+//       for (let i = 0; i < daysDifference; i++) {
+//         const currentDate = new Date(attendanceStart);
+//         currentDate.setDate(currentDate.getDate() + i);
+//         if (type === 1) {
+//           if (currentDate.getDay() !== 6 && currentDate.getDay() !== 0) {
+//             workingDays++;
+//           }
+//         } else {
+//           if (currentDate.getDay() !== 0) {
+//             workingDays++;
+//           }
+//         }
+//       }
+//     }
+//   });
+//   console.log("workingDays", workingDays);
+//   return workingDays;
+// };
+
+
+
+// const calculateWorkingDays = (attendanceList) => {
+//   let workingDays = 0;
+
+//   attendanceList.forEach((attendance) => {
+//     const attendanceStart = attendance.attendance_start
+
+//     const attendanceEnd = attendance.attendance_end? attendance.attendance_end: null;
+
+//     if (attendanceStart) {
+//       const timeDifferenceMillis = attendanceEnd ? Math.abs(attendanceEnd - attendanceStart) : 0;
+//       const totalSeconds = Math.floor(timeDifferenceMillis / 1000);
+//       const hours = Math.floor(totalSeconds / 3600);
+//       const minutes = Math.floor((totalSeconds % 3600) / 60);
+//       const secondsRemaining = totalSeconds % 60;
+
+//       //console.log('for',attendanceStart,attendanceEnd);
+
+//       const formattedDuration = `${hours} hours, ${minutes} minutes, ${secondsRemaining} seconds`;
+//       console.log('formattedDuration',formattedDuration)
+//       if (attendanceEnd) {
+//         if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+//           console.log("1")
+//           workingDays += 1;
+//         } else {
+//           console.log("2")
+
+//           workingDays += 0.5;
+//         }
+//       } if (attendanceStart && attendanceEnd) {
+//         const daysDifference = Math.ceil(formattedDuration / 8); 
+  
+//         for (let i = 0; i < daysDifference; i++) {
+//           const currentDate = new Date(attendanceStart);
+//           currentDate.setDate(currentDate.getDate() + i);
+//             if (currentDate.getDay() !== 0) {
+//               workingDays += 1; 
+//             }
+        
+//         }
+//       }
+//     }
+//   });
+
+//   return workingDays;
+// };
+
+// const calculateWorkingDays = (attendanceList) => {
+//   let workingDays = 0;
+
+//   attendanceList.forEach((attendance) => {
+//     const attendanceStart = moment1.utc(attendance.attendance_start).tz(targetTimezone);
+//     const attendanceEnd = attendance.attendance_end ? moment1.utc(attendance.attendance_end).tz(targetTimezone) : null;
+
+//     if (attendanceStart.isValid()) {
+//       const duration = moment1.duration(attendance.attendance_end - attendance.attendance_start);
+//       const hours = duration.asHours(); 
+
+//       console.log('hours',hours)
+//       console.log('for', attendanceStart, attendanceEnd);
+
+//       if (attendanceEnd) {
+//         if (hours >= 8) {
+//           console.log("1");
+//           workingDays += 1;
+//         } else if (hours > 0) {
+//           console.log("0.5");
+//           workingDays += 0.5;
+//         }
+//       }
+
+//       if (attendanceStart && attendanceEnd) {
+//         const daysDifference = duration.asDays(); 
+
+//         for (let i = 0; i <= Math.ceil(daysDifference); i++) {
+//           const currentDate = moment1(attendanceStart).add(i, 'days');
+//           if (currentDate.day() !== 0) {
+//             workingDays += 1; 
+//           }
+//         }
+//       }
+//     }
+//   });
+
+//   return workingDays;
+// };
+
+
+
+
+// const calculateWorkingDays = (attendanceList,type) => {
+//   let workingDays = 0;
+
+//   attendanceList.forEach((attendance) => {
+//     const attendanceStart = attendance.attendance_start;
+//     const attendanceEnd = attendance.attendance_end;
+
+//     if (attendanceStart && attendanceEnd !== null) {
+//       const timeDifferenceMillis = Math.abs(attendanceEnd - attendanceStart);
+//       const totalSeconds = Math.floor(timeDifferenceMillis / 1000);
+//       const hours = Math.floor(totalSeconds / 3600);
+//       const minutes = Math.floor((totalSeconds % 3600) / 60);
+//       const secondsRemaining = totalSeconds % 60;
+
+//       const formattedDuration = `${hours} hours, ${minutes} minutes, ${secondsRemaining} seconds`;
+//       console.log("formattedDuration",formattedDuration)
+
+//       if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+//         workingDays += 1;
+//       } else {
+//         workingDays += 0.5;
+//       }
+//     }
+//   });
+
+//   return workingDays;
+// };
+
+// const calculateWorkingDays = (attendanceList, type) => {
+//   let workingDays = 0;
+
+//   attendanceList.forEach((attendance) => {
+//     const attendanceStart = attendance.attendance_start;
+//     const attendanceEnd = attendance.attendance_end;
+
+//     if (attendanceStart && attendanceEnd !== null) {
+//       const timeDifferenceMillis = Math.abs(attendanceEnd - attendanceStart);
+//       const totalSeconds = Math.floor(timeDifferenceMillis / 1000);
+//       const hours = Math.floor(totalSeconds / 3600);
+//       const minutes = Math.floor((totalSeconds % 3600) / 60);
+//       const secondsRemaining = totalSeconds % 60;
+
+//       const formattedDuration = `${hours} hours, ${minutes} minutes, ${secondsRemaining} seconds`;
+//       console.log("formattedDuration", formattedDuration);
+
+//       const daysDifference = Math.ceil(timeDifferenceMillis / (1000 * 60 * 60 * 24));
+
+//       if (attendance.attendance_end !== null) {
+//         for (let i = 0; i < daysDifference; i++) {
+//           const currentDate = new Date(attendanceStart);
+//           currentDate.setDate(currentDate.getDate() + i);
+
+//           if (type === 1) {
+//             if (currentDate.getDay() !== 6 && currentDate.getDay() !== 0) {
+//               if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+
+//                 workingDays += 1;
+//                 console.log("3",workingDays)
+        
+//               } else {
+        
+//                 workingDays += 0.5;
+//                 console.log("4",workingDays)
+        
+//               }
+    
+//               // workingDays++;
+//               // console.log("1",workingDays)
+
+//             }
+//           } else if (type === 2) {
+//             if (currentDate.getDay() !== 0) {
+
+//               if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+
+//                 workingDays += 1;
+//                 console.log("3",workingDays)
+        
+//               } else {
+        
+//                 workingDays += 0.5;
+//                 console.log("4",workingDays)
+        
+//               }
+//               // workingDays++;
+//               // console.log("2",workingDays)
+
+//             }
+//           }
+//         }
+//       }
+
+//       // if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+
+//       //   workingDays += 1;
+//       //   console.log("3",workingDays)
+
+//       // } else {
+
+//       //   workingDays += 0.5;
+//       //   console.log("4",workingDays)
+
+//       // }
+//     }
+//   });
+
+//   return workingDays;
+// };
+
+
+
+
+
+
+
+
+
+
+const calculateWorkingDays = (attendanceList, type) => {
+  let workingDays = 0;
+
+  attendanceList.forEach((attendance) => {
+    const attendanceStart = attendance.attendance_start;
+    const attendanceEnd = attendance.attendance_end;
+
+    if (attendanceStart !== null && attendanceEnd !== null) {
+      const timeDifferenceMillis = Math.abs(attendanceEnd - attendanceStart);
+      const totalSeconds = Math.floor(timeDifferenceMillis / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const secondsRemaining = totalSeconds % 60;
+
+      const formattedDuration = `${hours} hours, ${minutes} minutes, ${secondsRemaining} seconds`;
+       console.log("formattedDuration", formattedDuration);
+      const daysDifference = Math.ceil(timeDifferenceMillis / (1000 * 60 * 60 * 24));
+
+      for (let i = 0; i < daysDifference; i++) {
+        const currentDate = new Date(attendanceStart);
+        currentDate.setDate(currentDate.getDate() + i);
+
+        if (type === 1 && currentDate.getDay() !== 6 && currentDate.getDay() !== 0) {
+          if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+            workingDays += 1;
+            console.log('1',workingDays)
+          } else {
+            workingDays += 0.5;
+            console.log('2',workingDays)
+
+          }
+        } else if (type === 2 && currentDate.getDay() !== 0) {
+          if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+            workingDays += 1;
+            console.log('3',workingDays)
+
+          } else {
+            workingDays += 0.5;
+            console.log('4',workingDays)
+
+          }
+        }
+        
+      }
+    }
+  });
+
+  return workingDays;
+};
+
+
+
+app.post('/workinDaysEmployee', async (req, res) => {
+  try {
+    console.log("workinDaysEmployee api")
+    let empId=req.body.employee_id;
+    let type=req.body.type;
+  
+    const attendance = await db('ptr_attendance')
+      .select('attendance_start', 'attendance_end')
+      .orderBy('attendance_id', 'desc')
+      .where('employee_id', empId);
+
+    if (attendance.length === 0) {
+      return res.status(400).send({ code: "400", status: "failed", response: "data is not found in db" });
+    } else {
+      const workingDays = calculateWorkingDays(attendance,type);
+      return res.status(200).send({
+        code: "200",
+        status: "success",
+        total_attendance: attendance.length,
+        working_days: workingDays,
+         //attendances: attendance,
+      });
+    }
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+
+
+
+
+//excelBulkUpload api 
+app.post("/excelBulkUpload",async (req, res) => {
+  console.log('excelBulkUpload api')
+  if (!req.files || !req.files.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  const file = req.files.file;
+  const uploadFilePath = path.join(__dirname, file.name);
+
+  file.mv(uploadFilePath, (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "File upload failed" });
+    }
+
+    importExcelDataToSQL(uploadFilePath)
+      .then(() => {
+        res.json({ message: "File upload successful" });
+      })
+      .catch((err) => {
+        console.error(err);
+        res.status(500).json({ message: "Error importing data to SQL" });
+      });
+  });
+});
+
+
+async function importExcelDataToSQL(filePath) {
+  try {
+    const workBook = xlsx.readFile(filePath);
+    const workSheet = workBook.Sheets[workBook.SheetNames[0]];
+    const range = xlsx.utils.decode_range(workSheet["!ref"]);
+
+    for (let row = range.s.r + 1; row <= range.e.r; row++) {
+      const data = {};
+
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cell = workSheet[xlsx.utils.encode_cell({ r: row, c: col })];
+        const headerCell = workSheet[xlsx.utils.encode_cell({ r: range.s.r, c: col })];
+        const header = headerCell ? headerCell.v : "";
+
+        data[header] = cell ? cell.v : null;
+      }
+      console.log('data',data)
+
+      await db("ptr_employees").insert(data);
+    }
+  } catch (err) {
+    console.error(err);
+    throw err; 
+  }
+}
+
+
