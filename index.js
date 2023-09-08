@@ -2448,9 +2448,10 @@ app.post('/getAttendanceDataWithType', async (req, res) => {
 
 
 
-
-const calculateWorkingDays = (attendanceList, type) => {
+//correct code
+const calculateWorkingDays = (attendanceList, type,filterbyMonths) => {
   let workingDays = 0;
+  const { fromMonth, toMonth } = filterbyMonths;
 
   attendanceList.forEach((attendance) => {
     const attendanceStart = attendance.attendance_start;
@@ -2490,6 +2491,18 @@ const calculateWorkingDays = (attendanceList, type) => {
             console.log('4',workingDays)
 
           }
+        }else  if (type ===3 &&
+          currentDate.getMonth() + 1 >= fromMonth &&
+          currentDate.getMonth() + 1 <= toMonth && 
+          currentDate.getDay() !== 0
+        ) {
+          if (hours > 8 || (hours === 8 && minutes === 0 && secondsRemaining === 0)) {
+            workingDays += 1;
+            console.log('Type 3: Working Day Added', workingDays);
+          } else {
+            workingDays += 0.5;
+            console.log('Type 3: Half Working Day Added', workingDays);
+          }
         }
         
       }
@@ -2506,6 +2519,9 @@ app.post('/workinDaysEmployee', async (req, res) => {
     console.log("workinDaysEmployee api")
     let empId=req.body.employee_id;
     let type=req.body.type;
+    let filterbyMonths=req.body.filter;
+   let {fromMonth,toMonth}=filterbyMonths;
+   console.log('filterbyMonths',fromMonth,toMonth)
   
     const attendance = await db('ptr_attendance')
       .select('attendance_start', 'attendance_end')
@@ -2515,7 +2531,7 @@ app.post('/workinDaysEmployee', async (req, res) => {
     if (attendance.length === 0) {
       return res.status(400).send({ code: "400", status: "failed", response: "data is not found in db" });
     } else {
-      const workingDays = calculateWorkingDays(attendance,type);
+      const workingDays = calculateWorkingDays(attendance,type,filterbyMonths);
       return res.status(200).send({
         code: "200",
         status: "success",
